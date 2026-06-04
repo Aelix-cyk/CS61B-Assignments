@@ -113,6 +113,7 @@ public class Model extends Observable {
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
+        this.board.setViewingPerspective(side);
         for (int col = 0; col < this.size(); col += 1) {
             Tile tile0, tile1;
             boolean merged;
@@ -132,7 +133,7 @@ public class Model extends Observable {
                 }
             }
         }
-
+        this.board.setViewingPerspective(Side.NORTH);
         checkGameOver();
         if (changed) {
             setChanged();
@@ -161,10 +162,7 @@ public class Model extends Observable {
         if (target == null) {
             return true;
         }
-        if (target.value() == source.value()) {
-            return true;
-        }
-        return false;
+        return target.value() == source.value();
     }
 
     /** Returns true if at least one space on the Board is empty.
