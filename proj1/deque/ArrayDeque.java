@@ -12,7 +12,7 @@ public class ArrayDeque<T> {
 
     public ArrayDeque() {
         Items = (T[]) new Object[8];
-        size = 8;
+        size = 0;
         first = 0;
         last = 0;
     }
