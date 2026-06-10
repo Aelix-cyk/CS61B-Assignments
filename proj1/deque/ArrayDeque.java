@@ -3,6 +3,8 @@ package deque;
 import afu.org.checkerframework.checker.igj.qual.I;
 
 import java.awt.desktop.QuitEvent;
+import java.lang.reflect.Array;
+import java.util.Iterator;
 
 public class ArrayDeque<T> {
     private T[] Items;
@@ -136,5 +138,30 @@ public class ArrayDeque<T> {
         }
     }
 
+    public Iterator<T> iterator() {
+        return null;
+    }
 
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof ArrayDeque)) {
+            return false;
+        }
+
+        ArrayDeque<T> other = (ArrayDeque<T>) o;
+
+        if (this.size() != other.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < size; i += 1) {
+            if (this.get(i) != other.get(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
