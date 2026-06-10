@@ -2,6 +2,8 @@ package deque;
 
 import jh61b.junit.In;
 
+import java.util.Iterator;
+
 public class LinkedListDeque<T> {
     private class IntNode {
         public T item;
@@ -83,7 +85,7 @@ public class LinkedListDeque<T> {
     public T get(int index) {
         int currentIdx = 0;
         IntNode e = senitel.next;
-        if (size >= index) {
+        if (index >= size) {
             return null;
         } else {
             while (currentIdx < index) {
@@ -92,5 +94,32 @@ public class LinkedListDeque<T> {
             }
             return e.item;
         }
+    }
+
+    public Iterator<T> iterator() {
+        return null;
+    }
+
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof LinkedListDeque)) {
+            return false;
+        }
+
+        LinkedListDeque<T> other = (LinkedListDeque<T>) o;
+
+        if (this.size() != other.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < size; i += 1) {
+            if (this.get(i) != other.get(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -1,6 +1,6 @@
 package deque;
 
-import afu.org.checkerframework.checker.igj.qual.I;
+// import afu.org.checkerframework.checker.igj.qual.I;
 
 import java.awt.desktop.QuitEvent;
 import java.lang.reflect.Array;
