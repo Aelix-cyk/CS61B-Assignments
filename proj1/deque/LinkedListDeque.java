@@ -1,10 +1,8 @@
 package deque;
 
-import jh61b.junit.In;
-
 import java.util.Iterator;
 
-public class LinkedListDeque<T> {
+public class LinkedListDeque<T> implements Deque<T> {
     private class IntNode {
         public T item;
         public IntNode next;
@@ -27,6 +25,7 @@ public class LinkedListDeque<T> {
         size = 0;
     }
 
+    @Override
     public void addFirst(T item) {
         IntNode first = new IntNode(item, senitel, senitel.next);
         senitel.next = first;
@@ -34,6 +33,7 @@ public class LinkedListDeque<T> {
         size += 1;
     }
 
+    @Override
     public void addLast(T item) {
         IntNode last = new IntNode(item, senitel.prev, senitel);
         senitel.prev = last;
@@ -41,14 +41,12 @@ public class LinkedListDeque<T> {
         size += 1;
     }
 
-    public boolean isEmpty() {
-        return size == 0;
-    }
-
+    @Override
     public int size() {
         return size;
     }
 
+    @Override
     public void printDeque() {
         IntNode e = senitel.next;
         for (int i = 0; i < size; i += 1) {
@@ -58,6 +56,7 @@ public class LinkedListDeque<T> {
         System.out.println();
     }
 
+    @Override
     public T removeFirst() {
         if (size == 0) {
             return null;
@@ -70,6 +69,7 @@ public class LinkedListDeque<T> {
         }
     }
 
+    @Override
     public T removeLast() {
         if (size == 0) {
             return null;
@@ -82,6 +82,7 @@ public class LinkedListDeque<T> {
         }
     }
 
+    @Override
     public T get(int index) {
         int currentIdx = 0;
         IntNode e = senitel.next;
@@ -97,7 +98,27 @@ public class LinkedListDeque<T> {
     }
 
     public Iterator<T> iterator() {
-        return null;
+        return new LinkedListDequeIterator();
+    }
+
+    private class LinkedListDequeIterator implements Iterator<T> {
+        private int winPos;
+
+        public LinkedListDequeIterator() {
+            winPos = 0;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return winPos < size;
+        }
+
+        @Override
+        public T next() {
+            T returnItem = get(winPos);
+            winPos += 1;
+            return returnItem;
+        }
     }
 
     public boolean equals(Object o) {

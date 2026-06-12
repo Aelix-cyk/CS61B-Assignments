@@ -2,11 +2,9 @@ package deque;
 
 // import afu.org.checkerframework.checker.igj.qual.I;
 
-import java.awt.desktop.QuitEvent;
-import java.lang.reflect.Array;
 import java.util.Iterator;
 
-public class ArrayDeque<T> {
+public class ArrayDeque<T> implements Deque<T> {
     private T[] Items;
     private int size;
     private int first;
@@ -68,6 +66,7 @@ public class ArrayDeque<T> {
         }
     }
 
+    @Override
     public void addFirst(T item) {
         expandSize();
         first = prevIndex(first);
@@ -75,6 +74,7 @@ public class ArrayDeque<T> {
         size += 1;
     }
 
+    @Override
     public void addLast(T item) {
         expandSize();
         last = nextIndex(last);
@@ -82,14 +82,12 @@ public class ArrayDeque<T> {
         size += 1;
     }
 
-    public boolean isEmpty() {
-        return size == 0;
-    }
-
+    @Override
     public int size() {
         return size;
     }
 
+    @Override
     public void printDeque() {
         if (last > first) {
             for (int i = first; i <= last; i += 1) {
@@ -106,6 +104,7 @@ public class ArrayDeque<T> {
         System.out.println();
     }
 
+    @Override
     public T removeFirst() {
         T firstItem;
         if (size == 0) {
@@ -113,11 +112,12 @@ public class ArrayDeque<T> {
         }
         reduceSize();
         firstItem = Items[first];
-        first = nextIndex(first);
         size -= 1;
+        first = nextIndex(first);
         return firstItem;
     }
 
+    @Override
     public T removeLast() {
         T lastItem;
         if (size == 0) {
@@ -125,11 +125,12 @@ public class ArrayDeque<T> {
         }
         reduceSize();
         lastItem = Items[last];
-        last = prevIndex(last);
         size -= 1;
+        last = prevIndex(last);
         return lastItem;
     }
 
+    @Override
     public T get(int index) {
         if (size == 0) {
             return null;
@@ -139,7 +140,27 @@ public class ArrayDeque<T> {
     }
 
     public Iterator<T> iterator() {
-        return null;
+        return new ArrayListDequeIterator();
+    }
+
+    private class ArrayListDequeIterator implements Iterator<T> {
+        private int winPos;
+
+        public ArrayListDequeIterator() {
+            winPos = 0;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return winPos < size;
+        }
+
+        @Override
+        public T next() {
+            T returnItem = get(winPos);
+            winPos += 1;
+            return returnItem;
+        }
     }
 
     public boolean equals(Object o) {
