@@ -6,6 +6,7 @@ import org.junit.Test;
 import java.util.Iterator;
 
 import static org.junit.Assert.*;
+import edu.princeton.cs.algs4.Stopwatch;
 
 public class ArrayDequeTest {
 
@@ -204,5 +205,62 @@ public class ArrayDequeTest {
             }
         }
 
+    }
+
+    private static void printTimingTable(int[] Ns, double[] times, int[] opCounts) {
+        System.out.printf("%12s %12s %12s %12s\n", "N", "time (s)", "# ops", "microsec/op");
+        System.out.printf("------------------------------------------------------------\n");
+        for (int i = 0; i < Ns.length; i += 1) {
+            int N = Ns[i];
+            double time = times[i];
+            int opCount = opCounts[i];
+            double timePerOp = time / opCounts[i] * 1e6;
+            System.out.printf("%12d %12.2f %12d %12.2f\n", N, time, opCount, timePerOp);
+        }
+    }
+
+    @Test
+    public void timingTestConstruction() {
+        final int MAX_SIZE = 20;
+        int[] Ns = {2000, 4000, 8000, 16000, 32000, 64000, 128000, 256000};
+        double[] times = new double[MAX_SIZE];
+        int[] opCounts = new int[MAX_SIZE];
+
+        for (int i = 0; i < Ns.length; i += 1) {
+            ArrayDeque<Integer> arrayDeque = new ArrayDeque<>();
+
+            opCounts[i] = 0;
+            Stopwatch sw = new Stopwatch();
+            for (int n = 0; n < Ns[i]; n += 1) {
+               arrayDeque.addFirst(n);
+               arrayDeque.addLast(n);
+               opCounts[i] += 2;
+            }
+            times[i] = sw.elapsedTime();
+        }
+        printTimingTable(Ns, times, opCounts);
+    }
+
+    @Test
+    public void timingTestGet() {
+        final int MAX_SIZE = 20;
+        int[] Ns = {2000, 4000, 8000, 16000, 32000, 64000, 128000, 256000};
+        double[] times = new double[MAX_SIZE];
+        int[] opCounts = new int[MAX_SIZE];
+
+        for (int i = 0; i < Ns.length; i += 1) {
+            ArrayDeque<Integer> arrayDeque = new ArrayDeque<>();
+            for (int j = 0; j < Ns[i]; j += 1) {
+                arrayDeque.addFirst(j);
+            }
+
+            opCounts[i] = Ns[i];
+            Stopwatch sw = new Stopwatch();
+            for (int n = 0; n < Ns[i]; n += 1) {
+                int temp = arrayDeque.get(n);
+            }
+            times[i] = sw.elapsedTime();
+        }
+        printTimingTable(Ns, times, opCounts);
     }
 }
