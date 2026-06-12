@@ -5,13 +5,13 @@ package deque;
 import java.util.Iterator;
 
 public class ArrayDeque<T> implements Deque<T> {
-    private T[] Items;
+    private T[] items;
     private int size;
     private int first;
     private int last;
 
     public ArrayDeque() {
-        Items = (T[]) new Object[8];
+        items = (T[]) new Object[8];
         size = 0;
         first = 0;
         last = 0;
@@ -22,7 +22,7 @@ public class ArrayDeque<T> implements Deque<T> {
         if (size == 0) {
             return index;
         } else {
-            return (index + 1) % Items.length;
+            return (index + 1) % items.length;
         }
     }
 
@@ -31,7 +31,7 @@ public class ArrayDeque<T> implements Deque<T> {
         if (size == 0) {
             return index;
         } else if (index == 0) {
-            return Items.length - 1;
+            return items.length - 1;
         } else {
             return index - 1;
         }
@@ -41,28 +41,28 @@ public class ArrayDeque<T> implements Deque<T> {
     private void resize(int capicity) {
         T[] newArray = (T[]) new Object[capicity];
         if (last > first) {
-            System.arraycopy(Items, first, newArray, 0, size);
+            System.arraycopy(items, first, newArray, 0, size);
         } else {
-            System.arraycopy(Items, first, newArray, 0, Items.length - first);
-            System.arraycopy(Items, 0, newArray, Items.length - first, last + 1);
+            System.arraycopy(items, first, newArray, 0, items.length - first);
+            System.arraycopy(items, 0, newArray, items.length - first, last + 1);
         }
-        Items = newArray;
+        items = newArray;
         first = 0;
         last = size - 1;
     }
 
     private void expandSize() {
-        double FACTOR = 1.2;
-        if (size == Items.length) {
-            resize((int) (size * FACTOR));
+        final double factor = 1.2;
+        if (size == items.length) {
+            resize((int) (size * factor));
         }
     }
 
     private void reduceSize() {
-        int QUOTIENT = 4;
-        int MINSIZE = 16;
-        if ((size < Items.length / QUOTIENT) && (size > MINSIZE)) {
-            resize(Items.length / QUOTIENT);
+        final int quotient = 4;
+        final int minSize = 16;
+        if ((size < items.length / quotient) && (size > minSize)) {
+            resize(items.length / quotient);
         }
     }
 
@@ -70,7 +70,7 @@ public class ArrayDeque<T> implements Deque<T> {
     public void addFirst(T item) {
         expandSize();
         first = prevIndex(first);
-        Items[first] = item;
+        items[first] = item;
         size += 1;
     }
 
@@ -78,7 +78,7 @@ public class ArrayDeque<T> implements Deque<T> {
     public void addLast(T item) {
         expandSize();
         last = nextIndex(last);
-        Items[last] = item;
+        items[last] = item;
         size += 1;
     }
 
@@ -91,14 +91,14 @@ public class ArrayDeque<T> implements Deque<T> {
     public void printDeque() {
         if (last > first) {
             for (int i = first; i <= last; i += 1) {
-                System.out.print(Items[i] + " ");
+                System.out.print(items[i] + " ");
             }
         } else {
-            for (int i = first; i < Items.length; i += 1) {
-                System.out.print(Items[i] + " ");
+            for (int i = first; i < items.length; i += 1) {
+                System.out.print(items[i] + " ");
             }
             for (int i = 0; i <= last; i += 1) {
-                System.out.print(Items[i] + " ");
+                System.out.print(items[i] + " ");
             }
         }
         System.out.println();
@@ -111,7 +111,7 @@ public class ArrayDeque<T> implements Deque<T> {
             return null;
         }
         reduceSize();
-        firstItem = Items[first];
+        firstItem = items[first];
         size -= 1;
         first = nextIndex(first);
         return firstItem;
@@ -124,7 +124,7 @@ public class ArrayDeque<T> implements Deque<T> {
             return null;
         }
         reduceSize();
-        lastItem = Items[last];
+        lastItem = items[last];
         size -= 1;
         last = prevIndex(last);
         return lastItem;
@@ -135,7 +135,7 @@ public class ArrayDeque<T> implements Deque<T> {
         if (size == 0) {
             return null;
         } else {
-            return Items[(first + index) % Items.length];
+            return items[(first + index) % items.length];
         }
     }
 
