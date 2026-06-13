@@ -17,6 +17,10 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         last = 0;
     }
 
+    public int realSize() {
+        return items.length;
+    }
+
     /** Return the next index in clockwise (increment) */
     private int nextIndex(int index) {
         if (size == 0) {
@@ -114,6 +118,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         }
         reduceSize();
         firstItem = items[first];
+        items[first] = null;
         size -= 1;
         first = nextIndex(first);
         return firstItem;
@@ -127,6 +132,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         }
         reduceSize();
         lastItem = items[last];
+        items[last] = null;
         size -= 1;
         last = prevIndex(last);
         return lastItem;
@@ -181,7 +187,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         }
 
         for (int i = 0; i < size; i += 1) {
-            if (this.get(i) != other.get(i)) {
+            if (!this.get(i).equals(other.get(i))) {
                 return false;
             }
         }

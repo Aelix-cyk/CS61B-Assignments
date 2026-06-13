@@ -273,4 +273,40 @@ public class ArrayDequeTest {
         }
         printTimingTable(Ns, times, opCounts);
     }
+
+    /*
+    @Test
+    public void realSizeTest() throws InterruptedException {
+        int [] Ns = {1, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 10000, 100000};
+        ArrayDeque<Integer> ad = new ArrayDeque<>();
+        ArrayDeque<Integer> maxSize = new ArrayDeque<>();
+        ArrayDeque<Integer> minSize = new ArrayDeque<>();
+
+        for (int i = 0; i < Ns.length; i += 1) {
+            Runtime runtime = Runtime.getRuntime();
+            // 尽量让内存干净
+            runtime.gc();
+            Thread.sleep(100);
+            long memoryBefore = runtime.totalMemory() - runtime.freeMemory();
+
+            for (int j = 0; j < Ns[i]; j += 1) {
+               ad.addFirst(j);
+            }
+            maxSize.addLast(ad.realSize());
+            for (int j = 1; j < Ns[i]; j += 1) {
+                ad.removeLast();
+            }
+            minSize.addLast(ad.realSize());
+            ad.removeFirst();
+            System.out.println(Ns[i] + " " + maxSize.removeFirst() + " " + minSize.removeFirst());
+
+            runtime.gc();
+            Thread.sleep(100);
+            long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
+
+            long totalAllocated = memoryAfter - memoryBefore;
+            System.out.println("平均每个 ArrayDeque 占用约: " + totalAllocated + " 字节");
+        }
+    }
+    */
 }
