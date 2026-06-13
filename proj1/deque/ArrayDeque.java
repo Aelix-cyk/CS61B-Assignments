@@ -38,8 +38,8 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
     }
 
     /** Resize the internal array */
-    private void resize(int capicity) {
-        T[] newArray = (T[]) new Object[capicity];
+    private void resize(int capacity) {
+        T[] newArray = (T[]) new Object[capacity];
         if (last > first) {
             System.arraycopy(items, first, newArray, 0, size);
         } else {
