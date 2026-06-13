@@ -136,18 +136,22 @@ public class LinkedListDequeTest {
     @Test
     public void iteratorTest() {
         LinkedListDeque<Integer> lld1 = new LinkedListDeque<>();
-        lld1.addFirst(1);
-        lld1.addFirst(21);
-        lld1.addFirst(321);
-        lld1.addFirst(4321);
-        lld1.addFirst(54321);
         Iterator<Integer> iter = lld1.iterator();
+        final int N = 1000;
+        int[] testArray = new int[N];
+
+        // Initialize testArray
+        for (int i = 0; i < N; i += 1) {
+           testArray[i] = i;
+           lld1.addLast(i);
+        }
 
         int idx = 0;
         while (iter.hasNext()) {
             int item = iter.next();
             assertEquals((int) lld1.get(idx), item);
-            System.out.println(item);
+            assertEquals((int) lld1.getRecursive(idx), item);
+            assertEquals(item, testArray[idx]);
             idx += 1;
         }
     }
@@ -193,12 +197,12 @@ public class LinkedListDequeTest {
                     break;
                 case 3:
                     if (lld1.size() > 0) {
-                        assertEquals(lld1.removeFirst().intValue(), refer.removeFirst().intValue());
+                        assertEquals(lld1.removeFirst(), refer.removeFirst());
                     }
                     break;
                 case 4:
                     if (lld1.size() > 0) {
-                        assertEquals(lld1.removeLast().intValue(), refer.removeLast().intValue());
+                        assertEquals(lld1.removeLast(), refer.removeLast());
                     }
                     break;
                 default:

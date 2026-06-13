@@ -13,6 +13,16 @@ public class LinkedListDeque<T> implements Deque<T> {
             prev = p;
             next = n;
         }
+
+        public T getItem(int idx) {
+            if (idx == 0) {
+                return item;
+            } else if (next != null) {
+                return next.getItem(idx - 1);
+            } else {
+                return null;
+            }
+        }
     }
 
     private IntNode senitel;
@@ -95,6 +105,10 @@ public class LinkedListDeque<T> implements Deque<T> {
             }
             return e.item;
         }
+    }
+
+    public T getRecursive(int index) {
+        return senitel.next.getItem(index);
     }
 
     public Iterator<T> iterator() {
