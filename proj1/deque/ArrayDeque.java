@@ -61,10 +61,11 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
     private void reduceSize() {
         final int quotient = 4;
         final int minSize = 16;
-        if ((size < items.length / quotient) && (size >= minSize)) {
+        if (size < items.length / quotient) {
             int maxSize = Math.max(minSize, (items.length / quotient));
-            resize(maxSize);
-            reduceSize();
+            if (items.length > minSize) {
+                resize(maxSize);
+            }
         }
     }
 
@@ -112,11 +113,11 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         if (size == 0) {
             return null;
         }
-        reduceSize();
         firstItem = items[first];
         items[first] = null;
         size -= 1;
         first = nextIndex(first);
+        reduceSize();
         return firstItem;
     }
 
@@ -126,11 +127,11 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         if (size == 0) {
             return null;
         }
-        reduceSize();
         lastItem = items[last];
         items[last] = null;
         size -= 1;
         last = prevIndex(last);
+        reduceSize();
         return lastItem;
     }
 
