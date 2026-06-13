@@ -135,18 +135,28 @@ public class ArrayDequeTest {
     @Test
     public void iteratorTest() {
         ArrayDeque<Integer> lld1 = new ArrayDeque<>();
-        lld1.addFirst(1);
-        lld1.addFirst(21);
-        lld1.addFirst(321);
-        lld1.addFirst(4321);
-        lld1.addFirst(54321);
         Iterator<Integer> iter = lld1.iterator();
+        final int N = 1000;
+        int[] testArray = new int[N];
+
+        // Initialize testArray
+        for (int i = 0; i < N; i += 1) {
+            testArray[i] = i;
+            lld1.addLast(i);
+        }
 
         int idx = 0;
         while (iter.hasNext()) {
             int item = iter.next();
             assertEquals((int) lld1.get(idx), item);
-            System.out.println(item);
+            assertEquals(item, testArray[idx]);
+            idx += 1;
+        }
+
+        idx = 0;
+        for (Integer item : lld1) {
+            assertEquals(lld1.get(idx), item);
+            assertEquals(item.intValue(), testArray[idx]);
             idx += 1;
         }
     }

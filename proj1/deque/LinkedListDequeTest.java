@@ -154,6 +154,14 @@ public class LinkedListDequeTest {
             assertEquals(item, testArray[idx]);
             idx += 1;
         }
+
+        idx = 0;
+        for (Integer item : lld1) {
+            assertEquals(lld1.get(idx), item);
+            assertEquals(lld1.getRecursive(idx), item);
+            assertEquals(item.intValue(), testArray[idx]);
+            idx += 1;
+        }
     }
 
     @Test
