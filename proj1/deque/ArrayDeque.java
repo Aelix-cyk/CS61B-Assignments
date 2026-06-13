@@ -17,10 +17,6 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         last = 0;
     }
 
-    public int realSize() {
-        return items.length;
-    }
-
     /** Return the next index in clockwise (increment) */
     private int nextIndex(int index) {
         if (size == 0) {
