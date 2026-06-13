@@ -55,6 +55,29 @@ public class TestArrayDequeEC {
     public void erroredTest() {
         StudentArrayDeque<Integer> sad1 = new StudentArrayDeque<>();
         ArrayDequeSolution<Integer> refer = new ArrayDequeSolution<>();
+        String failureSequence =
+        "addFirst(0)\n"
+        + "addFirst(1)\n"
+        + "addLast(2)\n"
+        + "addFirst(3)\n"
+        + "addLast(4)\n"
+        + "get(0)\n"
+        + "addLast(6)\n"
+        + "addFirst(7)\n"
+        + "get(1)\n"
+        + "removeFirst()\n"
+        + "addLast(10)\n"
+        + "addFirst(11)\n"
+        + "removeFirst()\n"
+        + "removeLast()\n"
+        + "addFirst(14)\n"
+        + "addFirst(15)\n"
+        + "get(0)\n"
+        + "removeFirst()\n"
+        + "addFirst(18)\n"
+        + "addFirst(19)\n"
+        + "addFirst(20)\n"
+        + "removeLast()\n";
 
         sad1.addFirst(0);
         sad1.addFirst(1);
@@ -101,6 +124,6 @@ public class TestArrayDequeEC {
         refer.addFirst(19);
         refer.addFirst(20);
 
-        assertEquals(sad1.removeLast(), refer.removeLast());
+        assertEquals(failureSequence, sad1.removeLast(), refer.removeLast());
     }
 }
