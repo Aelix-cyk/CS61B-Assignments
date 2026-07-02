@@ -41,9 +41,8 @@ CWD
     - .gitlet                           <==== All persistent data is stored within here
         - commits                       <==== Where commit objects are stored
         - objects                       <==== Where blobs are stored
-            - xx                        <==== Subdirectory which is named with the first two numbers of sha-1 id
-                - xxx                   <==== binary files which are named with the rest 38 numbers of sha-1 id
         - HEAD                          <==== A file that stores the name of current branch
+        - STAGE                         <==== A file that stores the stage object
         - refs                          <==== References of branches
             - branches                  <==== Each file in this directory represents a branch, and stores the sha-1 id
                                               of the branch.

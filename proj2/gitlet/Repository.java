@@ -1,9 +1,6 @@
 package gitlet;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.Path;
 import static gitlet.Utils.*;
 
 /** Represents a gitlet repository.
@@ -18,41 +15,30 @@ public class Repository {
     public static final File GITLET_DIR = join(CWD, ".gitlet");
     /** The blobs directory. */
     public static final File BLOBS_DIR = join(GITLET_DIR, "blobs");
-    /** The commits directory. */
-    public static final File COMMITS_DIR = join(GITLET_DIR, "commits");
     /** The refs directory. */
     public static final File REFS_DIR = join(GITLET_DIR, "refs");
+    /** The head file */
+    public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
 
+    /** Setup files and directories for persistence */
     public static void setupPersistence() {
-        boolean result =GITLET_DIR.mkdir() | BLOBS_DIR.mkdir()
-                | COMMITS_DIR.mkdir() | REFS_DIR.mkdir();
+        boolean result;
+
+        result = GITLET_DIR.mkdir()
+                | BLOBS_DIR.mkdir()
+                | Commit.COMMITS_DIR.mkdir()
+                | REFS_DIR.mkdir();
         if (!result) {
             System.out.println("setupPersistence failed!");
             System.exit(0);
         }
+
+        Stage.saveStage(new Stage());
     }
 
     /** Check if there is a gitlet system already */
     public static boolean initialCheck() {
         return !directoryExists(GITLET_DIR.getName());
-    }
-
-    /** Check is there is a file with same name already */
-    public static boolean fileExists(String name) {
-        Path targetPath = Paths.get(name);
-        return Files.exists(targetPath) && (!Files.isDirectory(targetPath));
-    }
-
-    /** Check is there is a file with same name already */
-    public static boolean fileExists(File file) {
-        Path targetPath = Paths.get(file.getName());
-        return Files.exists(targetPath) && (!Files.isDirectory(targetPath));
-    }
-
-    /** Check is there is a directory with same name already */
-    public static boolean directoryExists(String name) {
-        Path targetPath = Paths.get(name);
-        return Files.exists(targetPath) && Files.isDirectory(targetPath);
     }
 
     /** Initial commit */
@@ -62,17 +48,9 @@ public class Repository {
 
         setupPersistence();
         initialCommit.setEpochTime();
-        String id = saveCommit(initialCommit);
+        String id = Commit.saveCommit(initialCommit);
         createBranch(defaultBranch, id);
         setHead(defaultBranch);
-    }
-
-    /** Write commit object into file */
-    public static String saveCommit(Commit commit) {
-        byte[] contents = serialize(commit);
-        String id = sha1(contents);
-        writeContents(join(COMMITS_DIR, id), contents);
-        return id;
     }
 
     /** Create a branch with given name */
@@ -88,8 +66,21 @@ public class Repository {
 
     /** Set the head pointer */
     public static void setHead(String branch) {
-        File file = join(GITLET_DIR, "HEAD");
-        writeContents(file, REFS_DIR.getName() + "/" + branch);
+        writeContents(HEAD_FILE, REFS_DIR.getName() + "/" + branch);
+    }
+
+    /** Get the commit object that HEAD point to */
+    public static Commit getHeadCommit() {
+        String branch = readContentsAsString(HEAD_FILE);
+        String id = readContentsAsString(join(GITLET_DIR, branch));
+        return readObject(join(Commit.COMMITS_DIR, id), Commit.class);
+    }
+
+    /** Add file to staging area */
+    public static void addToStage(String name) {
+        Stage stage = Stage.fromFile();
+        stage.addToStage(join(CWD, name), getHeadCommit());
+        Stage.saveStage(stage);
     }
 
 }

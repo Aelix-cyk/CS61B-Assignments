@@ -10,6 +10,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -235,5 +236,27 @@ class Utils {
     static void message(String msg, Object... args) {
         System.out.printf(msg, args);
         System.out.println();
+    }
+
+
+
+    /* FILE AND DIRECTORY CHECKING */
+
+    /** Check is there is a file with same name already */
+    static boolean fileExists(String name) {
+        Path targetPath = Paths.get(name);
+        return Files.exists(targetPath) && (!Files.isDirectory(targetPath));
+    }
+
+    /** Check is there is a file with same name already */
+    static boolean fileExists(File file) {
+        Path targetPath = Paths.get(file.getName());
+        return Files.exists(targetPath) && (!Files.isDirectory(targetPath));
+    }
+
+    /** Check is there is a directory with same name already */
+    static boolean directoryExists(String name) {
+        Path targetPath = Paths.get(name);
+        return Files.exists(targetPath) && Files.isDirectory(targetPath);
     }
 }

@@ -20,7 +20,7 @@ public class Main {
                 }
                 break;
             case "add":
-                // TODO: handle the `add [filename]` command
+                Repository.addToStage(args[1]);
                 break;
             // TODO: FILL THE REST IN
         }
