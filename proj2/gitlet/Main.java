@@ -20,9 +20,36 @@ public class Main {
                 }
                 break;
             case "add":
-                Repository.addToStage(args[1]);
+                if (checkArgs(args.length, 2)) {
+                    Repository.addToStage(args[1]);
+                }
+                break;
+            case "commit":
+                if (checkArgs(args.length, 2)) {
+                    if (args[1] == "") {
+                        System.out.println("Please enter a commit message.");
+                    } else {
+                        Repository.createCommit(args[1]);
+                    }
+                }
+                break;
+            case "rm":
+                if (checkArgs(args.length, 2)) {
+                    Repository.removeFromStage(args[1]);
+                }
+                break;
+            case "log":
+                Repository.log();
                 break;
             // TODO: FILL THE REST IN
         }
+    }
+
+    public static boolean checkArgs(int argsLength, int requiredLength) {
+        if (argsLength < requiredLength) {
+            System.out.println("Failed for lacking of arguments.");
+            return false;
+        }
+        return true;
     }
 }

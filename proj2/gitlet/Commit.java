@@ -1,11 +1,12 @@
 package gitlet;
 
 import java.io.File;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.Instant;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
 
 import static gitlet.Utils.*;
 
@@ -35,19 +36,27 @@ public class Commit implements Serializable {
         trackedFiles = new HashMap<>();
     }
 
-    /** Set timestamp with epoch time */
-    public void setEpochTime() {
-        timestamp = Instant.EPOCH.atZone(ZoneOffset.UTC);
+    Commit(String message, Commit parentCommit, String parentId) {
+        this.message = message;
+        timestamp = ZonedDateTime.now();
+        trackedFiles = new HashMap<>(parentCommit.trackedFiles);
+        parent = parentId;
     }
 
-    public void setParent(String id) {
-        parent = id;
+    /** Set timestamp with epoch time */
+    public void setEpochTime() {
+        timestamp = Instant.EPOCH.atZone(ZoneId.systemDefault());
     }
 
     public void setSecondParent(String id) {
         secondParent = id;
     }
 
+    public String getParent() {
+        return parent;
+    }
+
+    /** Write commit object into file */
     public static String saveCommit(Commit commit) {
         byte[] contents = serialize(commit);
         String id = sha1(contents);
@@ -55,9 +64,42 @@ public class Commit implements Serializable {
         return id;
     }
 
+    /** Load commit object from file */
+    public static Commit fromFile(File file) {
+        return readObject(file, Commit.class);
+    }
+
+    /** Check if this commit has the file */
+    public boolean hasFile(String name) {
+        return trackedFiles.containsKey(name);
+    }
+
     /** Check if this commit has the same file */
     public boolean hasSameFile(String name, String id) {
         return trackedFiles.containsKey(name) && trackedFiles.get(name).equals(id);
+    }
+
+    /** Add files from map to trackedFiles */
+    public void addFromMap(Map<String, String> addMap) {
+        trackedFiles.putAll(addMap);
+    }
+
+    /** Remove files in Set from trackedFiles */
+    public void removeFromSet(Set<String> set) {
+        for (String name : set) {
+            trackedFiles.remove(name);
+        }
+    }
+
+    /** Return a string that contains the commit log */
+    public String dumpLog(String id) {
+        String log = "===\n" + "commit " + id + "\n";
+        if (secondParent != null) {
+            log += "Merge: " + parent.substring(0, 5) + " " + secondParent.substring(0, 5) + "\n";
+        }
+        log += "Date: " + timestamp.format(DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy XX")) + "\n" +
+                message + "\n\n";
+        return log;
     }
 
 }
