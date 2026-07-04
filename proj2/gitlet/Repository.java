@@ -1,6 +1,8 @@
 package gitlet;
 
 import java.io.File;
+import java.util.List;
+
 import static gitlet.Utils.*;
 
 /** Represents a gitlet repository.
@@ -145,6 +147,45 @@ public class Repository {
            }
        }
        System.out.print(log.toString());
+    }
+
+    /** Print global commit log */
+    public static void globalLog() {
+        List<String> fileList = plainFilenamesIn(Commit.COMMITS_DIR);
+        StringBuilder log = new StringBuilder();
+
+        if (fileList != null) {
+            for (String id : fileList) {
+                File file = join(Commit.COMMITS_DIR, id);
+                Commit commit = Commit.fromFile(file);
+                log.append(commit.dumpLog(id));
+            }
+            System.out.print(log.toString());
+        }
+    }
+
+    /** Find commits with given commit message */
+    public static void findCommit(String message) {
+        List<String> fileList = plainFilenamesIn(Commit.COMMITS_DIR);
+        StringBuilder log = new StringBuilder();
+
+        if (fileList != null) {
+            for (String id : fileList) {
+                File file = join(Commit.COMMITS_DIR, id);
+                String commitMessage = Commit.fromFile(file).getMessage();
+
+                if (commitMessage.contains(message)) {
+                    log.append(id);
+                    log.append("\n");
+                }
+            }
+
+            if (log.length() > 0) {
+                System.out.print(log.toString());
+            } else {
+                System.out.println("Found no commit with that message.");
+            }
+        }
     }
 
 }

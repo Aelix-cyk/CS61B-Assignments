@@ -56,6 +56,10 @@ public class Commit implements Serializable {
         return parent;
     }
 
+    public String getMessage() {
+        return message;
+    }
+
     /** Write commit object into file */
     public static String saveCommit(Commit commit) {
         byte[] contents = serialize(commit);

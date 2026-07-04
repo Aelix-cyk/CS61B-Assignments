@@ -41,6 +41,14 @@ public class Main {
             case "log":
                 Repository.log();
                 break;
+            case "global-log":
+                Repository.globalLog();
+                break;
+            case "find":
+                if (checkArgs(args.length, 2)) {
+                    Repository.findCommit(args[1]);
+                }
+                break;
             // TODO: FILL THE REST IN
         }
     }
