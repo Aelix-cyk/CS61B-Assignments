@@ -49,6 +49,9 @@ public class Main {
                     Repository.findCommit(args[1]);
                 }
                 break;
+            case "status":
+                Repository.status();
+                break;
             // TODO: FILL THE REST IN
         }
     }

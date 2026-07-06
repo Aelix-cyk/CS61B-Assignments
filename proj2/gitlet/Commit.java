@@ -5,6 +5,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.io.Serializable;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,6 +60,11 @@ public class Commit implements Serializable {
     public String getMessage() {
         return message;
     }
+
+    public Map<String, String> getTrackedFiles() {
+        return trackedFiles;
+    }
+
 
     /** Write commit object into file */
     public static String saveCommit(Commit commit) {

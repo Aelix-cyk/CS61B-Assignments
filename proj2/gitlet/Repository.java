@@ -1,7 +1,9 @@
 package gitlet;
 
 import java.io.File;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static gitlet.Utils.*;
 
@@ -86,6 +88,19 @@ public class Repository {
     /** Get the commit object that HEAD point to */
     public static Commit getHeadCommit() {
         return readObject(join(Commit.COMMITS_DIR, getHeadCommitId()), Commit.class);
+    }
+
+    /** Get the branch name of current HEAD */
+    public static String getHeadName() {
+        Pattern pattern = Pattern.compile("refs/(?<branchName>\\w+)");
+        Matcher matcher = pattern.matcher(readContentsAsString(HEAD_FILE));
+        if (matcher.find()) {
+            return matcher.group("branchName");
+        } else {
+            System.out.println("Fail to get Head's branch name");
+            System.exit(0);
+            return "";
+        }
     }
 
     /** Add file to staging area */
@@ -188,4 +203,76 @@ public class Repository {
         }
     }
 
+    /** Show the status of gitlet system */
+    public static void status() {
+        StringBuilder output = new StringBuilder();
+
+        /* status of branches */
+        ArrayList<String> branchNames = new ArrayList<>(plainFilenamesIn(REFS_DIR));
+        String currentBranch = getHeadName();
+
+        output.append("=== Branches ===\n");
+        branchNames.remove(currentBranch);
+        branchNames.add("*" + currentBranch);
+        output.append(sortedStatusString(branchNames));
+
+        /* status of staged files and removed files */
+        Stage stage = Stage.fromFile();
+        Map<String, String> additionMap = stage.getAdditionMap();
+        Set<String> removalSet = stage.getRemovalSet();
+
+        output.append("\n=== Staged Files ===\n");
+        output.append(sortedStatusString(additionMap.keySet()));
+        output.append("\n=== Removed Files ===\n");
+        output.append(sortedStatusString(removalSet));
+
+        /* status of modifications that are not staged for commit */
+        List<String> filesInCWD = plainFilenamesIn(CWD);
+        Commit currentCommit = getHeadCommit();
+        Map<String, String> commitMap = currentCommit.getTrackedFiles();
+        HashSet<String> modifiedFiles = new HashSet<>();
+        HashSet<String> untrackedFiles = new HashSet<>();
+        if (filesInCWD != null) {
+            /* traverse files in current directory */
+            for (String file : filesInCWD) {
+                String id = sha1(readContents(join(CWD, file)));
+                /* not in current commit and not in additionMap */
+                if (!currentCommit.hasFile(file) && !stage.hasFile(file)) untrackedFiles.add(file);
+
+                if (!stage.hasSameFile(file, id)) {
+                    /* staged for addition but changed */
+                    if (stage.hasFile(file)) modifiedFiles.add(file + " (modified)");
+                    /* tracked in commit but changed and not staged */
+                    if (currentCommit.hasFile(file) && !currentCommit.hasSameFile(file, id)) {
+                        modifiedFiles.add(file + " (modified)");
+                    }
+                }
+            }
+
+            /* find deleted files */
+            for (String file : commitMap.keySet()) {
+                if (!filesInCWD.contains(file) && !removalSet.contains(file)) {
+                    modifiedFiles.add(file + " (deleted)");
+                }
+            }
+            for (String file : additionMap.keySet()) {
+                if (!filesInCWD.contains(file)) modifiedFiles.add(file + " (deleted)");
+            }
+        }
+
+        output.append("\n=== Modifications Not Staged For Commit ===\n");
+        output.append(sortedStatusString(modifiedFiles));
+        output.append("\n=== Untracked Files ===\n");
+        output.append(sortedStatusString(untrackedFiles)).append("\n");
+
+        System.out.print(output.toString());
+    }
+
+    public static String sortedStatusString(Collection<String> collection) {
+        String[] files = collection.toArray(new String[0]);
+        Arrays.sort(files);
+        StringBuilder sorted = new StringBuilder();
+        for (String file : files) sorted.append(file).append("\n");
+        return sorted.toString();
+    }
 }

@@ -2,10 +2,7 @@ package gitlet;
 
 import java.io.File;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 import static gitlet.Utils.*;
 
@@ -37,8 +34,14 @@ public class Stage implements Serializable {
         return readObject(STAGE_FILE, Stage.class);
     }
 
+    /** Check if additionMap has a file with same name and sha-1 id */
     public boolean hasSameFile(String name, String id) {
         return additionMap.containsKey(name) && additionMap.get(name).equals(id);
+    }
+
+    /** Check if additionMap has a file with same name */
+    public boolean hasFile(String name) {
+        return additionMap.containsKey(name);
     }
 
     /** Add file to staging area */
@@ -87,7 +90,7 @@ public class Stage implements Serializable {
         }
 
         if (fileInCommit) {
-            removalSet.remove(name);
+            removalSet.add(name);
             /* remove file if it is in current commit */
             if (file.exists()) {
                 restrictedDelete(file);
@@ -96,12 +99,12 @@ public class Stage implements Serializable {
     }
 
     /** Return the additionMap */
-    public HashMap<String, String> getAdditionMap() {
+    public Map<String, String> getAdditionMap() {
         return additionMap;
     }
 
     /** Return the removalSet */
-    public HashSet<String> getRemovalSet() {
+    public Set<String> getRemovalSet() {
         return removalSet;
     }
 
