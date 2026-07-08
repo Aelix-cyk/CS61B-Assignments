@@ -58,7 +58,7 @@ public class Repository {
         setHead(defaultBranch);
     }
 
-    /** Create a branch with given name */
+    /** Create a branch with given name and commit id */
     public static void createBranch(String branch, String id) {
         File file = join(REFS_DIR, branch);
         if (fileExists(file)) {
@@ -67,6 +67,24 @@ public class Repository {
         } else {
             writeContents(file, id);
         }
+    }
+
+    /** Create a branch with given name */
+    public static void createBranch(String branch) {
+        createBranch(branch, getHeadCommitId());
+    }
+
+    /** Remove the branch */
+    public static void removeBranch(String branch) {
+        File file = join(REFS_DIR, branch);
+        if (!fileExists(file)) {
+            System.out.println("A branch with that name does not exist.");
+        } else if (branch.equals(getHeadName())) {
+            System.out.println("Cannot remove the current branch.");
+        } else if (file.delete()) {
+            return;
+        }
+        System.exit(0);
     }
 
     /** Set the branch in HEAD */
@@ -167,7 +185,7 @@ public class Repository {
            log.append(commit.dumpLog(id));
            id = commit.getParent();
            if (id != null) {
-               commit = Commit.fromFile(join(Commit.COMMITS_DIR, id));
+               commit = Commit.fromFile(id);
            } else {
                break;
            }
@@ -182,8 +200,7 @@ public class Repository {
 
         if (fileList != null) {
             for (String id : fileList) {
-                File file = join(Commit.COMMITS_DIR, id);
-                Commit commit = Commit.fromFile(file);
+                Commit commit = Commit.fromFile(id);
                 log.append(commit.dumpLog(id));
             }
             System.out.print(log.toString());
@@ -197,8 +214,7 @@ public class Repository {
 
         if (fileList != null) {
             for (String id : fileList) {
-                File file = join(Commit.COMMITS_DIR, id);
-                String commitMessage = Commit.fromFile(file).getMessage();
+                String commitMessage = Commit.fromFile(id).getMessage();
 
                 if (commitMessage.contains(message)) {
                     log.append(id);
@@ -300,19 +316,9 @@ public class Repository {
     /** Check out the given file in given commit */
     public static void checkoutCommitFile(String shortId, String file) {
         String id = getLongId(shortId);
-        if (id.length() == UID_LENGTH) {
-            Commit commit = Commit.fromFile(join(Commit.COMMITS_DIR, id));
-            if (commit.hasFile(file)) {
-                restoreFile(file, commit.trackedFileId(file));
-                return;
-            } else {
-                System.out.println("File does not exist in that commit.");
-            }
-
-        } else {
-            System.out.println("No commit with that id exists.");
-        }
-        System.exit(0);
+        Commit commit = Commit.fromFile(id);
+        if (commit.hasFile(file)) restoreFile(file, commit.trackedFileId(file));
+        else System.out.println("File does not exist in that commit.");
     }
 
     /** Check out the given branch */
@@ -329,11 +335,18 @@ public class Repository {
             System.out.println("No need to checkout the current branch.");
             System.exit(0);
         }
+
+        checkoutCommit(getBranchCommitId(branch));
+        setHead(branch);
+    }
+
+    /** Checkout the given commit */
+    public static void checkoutCommit(String id) {
         /* check untracked files that would be overwritten */
         ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(CWD)));
         Commit currentCommit = getHeadCommit();
-        Commit checkOutBranch = getBranchCommit(branch);
-        Map<String, String> checkOutTrackedFiles = checkOutBranch.getTrackedFiles();
+        Commit checkOutCommit = Commit.fromFile(id);
+        Map<String, String> checkOutTrackedFiles = checkOutCommit.getTrackedFiles();
         HashSet<String> filesToOverwrite = new HashSet<>();
         HashSet<String> filesToDelete = new HashSet<>();
         HashSet<String> filesToCreate = new HashSet<>();
@@ -341,12 +354,12 @@ public class Repository {
         for (String file : checkOutTrackedFiles.keySet()) {
             if (files.contains(file)) {
                 if (!currentCommit.hasFile(file)) {
-                    if (checkOutBranch.hasFile(file)) {
+                    if (checkOutCommit.hasFile(file)) {
                         System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
                         System.exit(0);
                     }
                 } else {
-                    if (checkOutBranch.hasFile(file)) filesToOverwrite.add(file);
+                    if (checkOutCommit.hasFile(file)) filesToOverwrite.add(file);
                     else filesToDelete.add(file);
                 }
             } else {
@@ -358,11 +371,9 @@ public class Repository {
         for (String file : filesToCreate) restoreFile(file, checkOutTrackedFiles.get(file));
         for (String file : filesToOverwrite) {
             String currentId = sha1((Object) readContents(join(CWD, file)));
-            if (!currentId.equals(checkOutTrackedFiles.get(file))) {
-                restoreFile(file, checkOutTrackedFiles.get(file));
-            }
+            String checkOutId = checkOutTrackedFiles.get(file);
+            if (!currentId.equals(checkOutId)) restoreFile(file, checkOutId);
         }
-        setHead(branch);
         Stage.saveStage(new Stage());
     }
 
@@ -378,6 +389,16 @@ public class Repository {
         for (String file : files) {
             if (file.substring(0, id.length() - 1).equals(id)) return file;
         }
+        System.out.println("No commit with that id exists.");
+        System.exit(0);
         return "";
     }
+
+    /** Reset with given commit id */
+    public static void reset(String shordId) {
+        String id = getLongId(shordId);
+        checkoutCommit(id);
+        setHeadCommitId(id);
+    }
+
 }

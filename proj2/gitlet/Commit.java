@@ -79,6 +79,11 @@ public class Commit implements Serializable {
         return readObject(file, Commit.class);
     }
 
+    /** Load commit object according to id */
+    public static Commit fromFile(String id) {
+        return readObject(join(COMMITS_DIR, id), Commit.class);
+    }
+
     /** Check if this commit has the file */
     public boolean hasFile(String name) {
         return trackedFiles.containsKey(name);

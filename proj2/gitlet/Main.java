@@ -63,6 +63,21 @@ public class Main {
                     System.out.println("Illegal arguments");
                 }
                 break;
+            case "branch":
+                if (checkArgs(args.length, 2)) {
+                    Repository.createBranch(args[1]);
+                }
+                break;
+            case "rm-branch":
+                if (checkArgs(args.length, 2)) {
+                    Repository.removeBranch(args[1]);
+                }
+                break;
+            case "reset":
+                if (checkArgs(args.length, 2)) {
+                    Repository.reset(args[1]);
+                }
+                break;
             // TODO: FILL THE REST IN
         }
     }
