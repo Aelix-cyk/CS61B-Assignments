@@ -1,5 +1,6 @@
 package gitlet;
 
+import javax.swing.*;
 import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -101,6 +102,16 @@ public class Repository {
             System.exit(0);
             return "";
         }
+    }
+
+    /** Get the commit object that the branch point to */
+    public static Commit getBranchCommit(String branch) {
+        return readObject(join(Commit.COMMITS_DIR, getBranchCommitId(branch)), Commit.class);
+    }
+
+    /** Get the branch's commit id */
+    public static String getBranchCommitId(String branch) {
+        return readContentsAsString(join(REFS_DIR, branch));
     }
 
     /** Add file to staging area */
@@ -274,5 +285,99 @@ public class Repository {
         StringBuilder sorted = new StringBuilder();
         for (String file : files) sorted.append(file).append("\n");
         return sorted.toString();
+    }
+
+    /** Check out the given file in previous commit */
+    public static void checkoutFile(String file) {
+        Commit commit = getHeadCommit();
+        if (!commit.hasFile(file)) {
+            System.out.println("File does not exist in that commit.");
+            System.exit(0);
+        }
+        restoreFile(file, commit.trackedFileId(file));
+    }
+
+    /** Check out the given file in given commit */
+    public static void checkoutCommitFile(String shortId, String file) {
+        String id = getLongId(shortId);
+        if (id.length() == UID_LENGTH) {
+            Commit commit = Commit.fromFile(join(Commit.COMMITS_DIR, id));
+            if (commit.hasFile(file)) {
+                restoreFile(file, commit.trackedFileId(file));
+                return;
+            } else {
+                System.out.println("File does not exist in that commit.");
+            }
+
+        } else {
+            System.out.println("No commit with that id exists.");
+        }
+        System.exit(0);
+    }
+
+    /** Check out the given branch */
+    public static void checkoutBranch(String branch) {
+        /* check that the branch exists */
+        ArrayList<String> branchNames = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(REFS_DIR)));
+        if (!branchNames.contains(branch)) {
+            System.out.println("No such branch exists.");
+            System.exit(0);
+        }
+        /* check that branch is not current branch */
+        String currentBranch = getHeadName();
+        if (branch.equals(currentBranch)) {
+            System.out.println("No need to checkout the current branch.");
+            System.exit(0);
+        }
+        /* check untracked files that would be overwritten */
+        ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(CWD)));
+        Commit currentCommit = getHeadCommit();
+        Commit checkOutBranch = getBranchCommit(branch);
+        Map<String, String> checkOutTrackedFiles = checkOutBranch.getTrackedFiles();
+        HashSet<String> filesToOverwrite = new HashSet<>();
+        HashSet<String> filesToDelete = new HashSet<>();
+        HashSet<String> filesToCreate = new HashSet<>();
+
+        for (String file : checkOutTrackedFiles.keySet()) {
+            if (files.contains(file)) {
+                if (!currentCommit.hasFile(file)) {
+                    if (checkOutBranch.hasFile(file)) {
+                        System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                        System.exit(0);
+                    }
+                } else {
+                    if (checkOutBranch.hasFile(file)) filesToOverwrite.add(file);
+                    else filesToDelete.add(file);
+                }
+            } else {
+                filesToCreate.add(file);
+            }
+        }
+
+        for (String file : filesToDelete) restrictedDelete(join(CWD, file));
+        for (String file : filesToCreate) restoreFile(file, checkOutTrackedFiles.get(file));
+        for (String file : filesToOverwrite) {
+            String currentId = sha1((Object) readContents(join(CWD, file)));
+            if (!currentId.equals(checkOutTrackedFiles.get(file))) {
+                restoreFile(file, checkOutTrackedFiles.get(file));
+            }
+        }
+        setHead(branch);
+        Stage.saveStage(new Stage());
+    }
+
+    /** Restore given file from blobs by sha-1 id */
+    public static void restoreFile(String file, String id) {
+        writeContents(join(CWD, file), (Object) readContents(join(BLOBS_DIR, id)));
+    }
+
+    /** Return the long id with its first 6 or more digits if it exists */
+    public static String getLongId(String id) {
+        if (id.length() == UID_LENGTH) return id;
+        ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(Commit.COMMITS_DIR)));
+        for (String file : files) {
+            if (file.substring(0, id.length() - 1).equals(id)) return file;
+        }
+        return "";
     }
 }

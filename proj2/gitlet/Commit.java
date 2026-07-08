@@ -112,4 +112,9 @@ public class Commit implements Serializable {
         return log;
     }
 
+    /** Return the sha-1 id of file from trackedFiles */
+    public String trackedFileId(String file) {
+        return trackedFiles.get(file);
+    }
+
 }

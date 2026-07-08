@@ -52,15 +52,22 @@ public class Main {
             case "status":
                 Repository.status();
                 break;
+            case "checkout":
+                if (checkArgs(args.length, 2)) {
+                    Repository.checkoutBranch(args[1]);
+                } else if (checkArgs(args.length, 3) && args[1].equals("--")) {
+                    Repository.checkoutFile(args[2]);
+                } else if (checkArgs(args.length, 4) && args[2].equals("--")) {
+                    Repository.checkoutCommitFile(args[1], args[3]);
+                } else {
+                    System.out.println("Illegal arguments");
+                }
+                break;
             // TODO: FILL THE REST IN
         }
     }
 
     public static boolean checkArgs(int argsLength, int requiredLength) {
-        if (argsLength < requiredLength) {
-            System.out.println("Failed for lacking of arguments.");
-            return false;
-        }
-        return true;
+        return argsLength == requiredLength;
     }
 }
