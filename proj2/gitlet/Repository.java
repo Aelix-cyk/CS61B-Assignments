@@ -521,23 +521,29 @@ public class Repository {
     /** Find the split point between two branch */
     public static String findSplitPoint(String branchA, String branchB) {
         String[] branches = new String[]{branchA, branchB};
-        HashSet<String>[] commitsSet = new HashSet[]{new HashSet<String>(), new HashSet<String>()};
-        ArrayDeque<String>[] commitsDeque = new ArrayDeque[]{new ArrayDeque<String>(), new ArrayDeque<String>()};
-        for (int i = 0; i < commitsSet.length; i += 1) {
-            commitsDeque[i].addLast(getBranchCommitId(branches[i]));
-            commitsSet[i].add(commitsDeque[i].getFirst());
+        List<HashSet<String>> commitsSets = new ArrayList<>();
+        List<ArrayDeque<String>> commitsDeques = new ArrayList<>();
+        /* initialize */
+        for (int i = 0; i < branches.length; i += 1) {
+            commitsSets.add(new HashSet<String>());
+            commitsDeques.add(new ArrayDeque<String>());
+        }
+        for (int i = 0; i < branches.length; i += 1) {
+            commitsDeques.get(i).addLast(getBranchCommitId(branches[i]));
+            commitsSets.get(i).add(commitsDeques.get(i).getFirst());
         }
 
+        /* use BFS to find split point */
         while (true) {
-            for (int i = 0; i < commitsSet.length; i += 1) {
-                ArrayDeque<String> tempDeque = new ArrayDeque<>(commitsDeque[i]);
-                commitsDeque[i].clear();
+            for (int i = 0; i < branches.length; i += 1) {
+                ArrayDeque<String> tempDeque = new ArrayDeque<>(commitsDeques.get(i));
+                commitsDeques.get(i).clear();
                 for (String id : tempDeque) {
-                    if (commitsSet[1-i].contains(id)) return id;
-                    commitsSet[i].add(id);
+                    if (commitsSets.get(1-i).contains(id)) return id;
+                    commitsSets.get(i).add(id);
                     Commit commit = Commit.fromFile(id);
-                    commitsDeque[i].addLast(commit.getParent());
-                    if (commit.getSecondParent() != null) commitsDeque[i].addLast(commit.getSecondParent());
+                    commitsDeques.get(i).addLast(commit.getParent());
+                    if (commit.getSecondParent() != null) commitsDeques.get(i).addLast(commit.getSecondParent());
                 }
             }
         }
