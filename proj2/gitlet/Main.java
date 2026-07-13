@@ -78,6 +78,11 @@ public class Main {
                     Repository.reset(args[1]);
                 }
                 break;
+            case "merge":
+                if (checkArgs(args.length, 2)) {
+                    Repository.merge(args[1]);
+                }
+                break;
             // TODO: FILL THE REST IN
         }
     }

@@ -57,6 +57,10 @@ public class Commit implements Serializable {
         return parent;
     }
 
+    public String getSecondParent() {
+        return secondParent;
+    }
+
     public String getMessage() {
         return message;
     }
