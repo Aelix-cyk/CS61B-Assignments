@@ -154,7 +154,10 @@ public class Repository {
     /** Create a new commit and move HEAD pointer to it */
     public static void createCommit(String message) {
         Stage stage = Stage.fromFile();
+        createCommit(message, null, stage);
+    }
 
+    public static void createCommit(String message, String secondParentId, Stage stage) {
         if (stage.isEmpty()) {
             System.out.println("No changes added to the commit.");
             System.exit(0);
@@ -162,6 +165,7 @@ public class Repository {
 
         Commit parentCommit = getHeadCommit();
         Commit newCommit = new Commit(message, parentCommit, getHeadCommitId());
+        if (secondParentId != null) newCommit.setSecondParent(secondParentId);
 
         /* process files in staging area */
         newCommit.addFromMap(stage.getAdditionMap());
@@ -426,9 +430,7 @@ public class Repository {
             System.out.println("Given branch is an ancestor of the current branch.");
             System.exit(0);
         } else if (splitPointId.equals(getHeadCommitId())) {
-            checkoutBranch(branch);
             System.out.println("Current branch fast-forwarded.");
-            System.exit(0);
         }
 
         /* check untracked files that would be overwritten */
@@ -505,6 +507,9 @@ public class Repository {
             writeConflictFile(file, currentCommit, givenCommit);
             stage.addFile(join(CWD, file), currentCommit);
         }
+
+        createCommit("Merge " + branch + " into " + getHeadName() + ".", getHeadCommitId(), stage);
+        if (!conflictSet.isEmpty()) System.out.println("Encountered a merge conflict.");
     }
 
     /** Write the conflict file with special format */
@@ -542,7 +547,7 @@ public class Repository {
                     if (commitsSets.get(1-i).contains(id)) return id;
                     commitsSets.get(i).add(id);
                     Commit commit = Commit.fromFile(id);
-                    commitsDeques.get(i).addLast(commit.getParent());
+                    if (commit.getParent() != null) commitsDeques.get(i).addLast(commit.getParent());
                     if (commit.getSecondParent() != null) commitsDeques.get(i).addLast(commit.getSecondParent());
                 }
             }

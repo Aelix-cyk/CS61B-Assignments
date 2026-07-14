@@ -9,7 +9,7 @@ import static gitlet.Utils.*;
 /** Represents a gitlet stage object.
  *  It stores data about staging area.
  */
-public class Stage implements Serializable {
+public class Stage implements Serializable, Dumpable {
 
     /** The file that stores stage object */
     public static final File STAGE_FILE = join(Repository.GITLET_DIR, "STAGE");
@@ -117,5 +117,14 @@ public class Stage implements Serializable {
     /** Check additionMap and removalSet is empty or not */
     public boolean isEmpty() {
         return additionMap.isEmpty() && removalSet.isEmpty();
+    }
+
+    /** Dump information */
+    @Override
+    public void dump() {
+        System.out.println("additionMap:");
+        for (String file : additionMap.keySet()) System.out.print(file + ", ");
+        System.out.println("\nremovalSet:");
+        for (String file : removalSet) System.out.print(file + ", ");
     }
 }
