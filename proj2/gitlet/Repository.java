@@ -400,6 +400,7 @@ public class Repository {
     /** Return the long id with its first 6 or more digits if it exists */
     public static String getLongId(String id) {
         ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(Commit.COMMITS_DIR)));
+        if (files.contains(id)) return id;
         for (String file : files) {
             if (file.substring(0, id.length() - 1).equals(id)) return file;
         }
