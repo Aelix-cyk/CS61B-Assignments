@@ -114,7 +114,7 @@ public class Commit implements Serializable {
     public String dumpLog(String id) {
         String log = "===\n" + "commit " + id + "\n";
         if (secondParent != null) {
-            log += "Merge: " + parent.substring(0, 5) + " " + secondParent.substring(0, 5) + "\n";
+            log += "Merge: " + parent.substring(0, 7) + " " + secondParent.substring(0, 7) + "\n";
         }
         log += "Date: " + timestamp.format(DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy xx"))
                 + "\n" + message + "\n\n";
