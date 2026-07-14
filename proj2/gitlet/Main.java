@@ -10,33 +10,36 @@ public class Main {
      */
     public static void main(String[] args) {
         // TODO: what if args is empty?
+        if (args.length == 0) {
+            Utils.message("Please enter a command.");
+            return;
+        }
         String firstArg = args[0];
+        if (!firstArg.equals("init") && !Repository.GITLET_DIR.exists()) {
+            Utils.message("Not in an initialized Gitlet directory.");
+            return;
+        }
         switch(firstArg) {
             case "init":
+                checkArgs(args.length, 1);
                 if (!Repository.initialCheck()) {
-                   System.out.println("A Gitlet version-control system already exists in the current directory.");
+                   Utils.message("A Gitlet version-control system already exists in the current directory.");
                 } else {
                     Repository.initialize();
                 }
                 break;
             case "add":
-                if (checkArgs(args.length, 2)) {
-                    Repository.addToStage(args[1]);
-                }
+                checkArgs(args.length, 2);
+                Repository.addToStage(args[1]);
                 break;
             case "commit":
-                if (checkArgs(args.length, 2)) {
-                    if (args[1] == "") {
-                        System.out.println("Please enter a commit message.");
-                    } else {
-                        Repository.createCommit(args[1]);
-                    }
-                }
+                checkArgs(args.length, 2);
+                if (args[1].isEmpty()) Utils.message("Please enter a commit message.");
+                else Repository.createCommit(args[1]);
                 break;
             case "rm":
-                if (checkArgs(args.length, 2)) {
-                    Repository.removeFromStage(args[1]);
-                }
+                checkArgs(args.length, 2);
+                Repository.removeFromStage(args[1]);
                 break;
             case "log":
                 Repository.log();
@@ -45,49 +48,50 @@ public class Main {
                 Repository.globalLog();
                 break;
             case "find":
-                if (checkArgs(args.length, 2)) {
-                    Repository.findCommit(args[1]);
-                }
+                checkArgs(args.length, 2);
+                Repository.findCommit(args[1]);
                 break;
             case "status":
                 Repository.status();
                 break;
             case "checkout":
-                if (checkArgs(args.length, 2)) {
+                if (args.length == 2) {
                     Repository.checkoutBranch(args[1]);
-                } else if (checkArgs(args.length, 3) && args[1].equals("--")) {
+                } else if (args.length == 3 && args[1].equals("--")) {
                     Repository.checkoutFile(args[2]);
-                } else if (checkArgs(args.length, 4) && args[2].equals("--")) {
+                } else if (args.length == 4 && args[2].equals("--")) {
                     Repository.checkoutCommitFile(args[1], args[3]);
                 } else {
-                    System.out.println("Illegal arguments");
+                    Utils.message("Incorrect operands.");
                 }
                 break;
             case "branch":
-                if (checkArgs(args.length, 2)) {
-                    Repository.createBranch(args[1]);
-                }
+                checkArgs(args.length, 2);
+                Repository.createBranch(args[1]);
                 break;
             case "rm-branch":
-                if (checkArgs(args.length, 2)) {
-                    Repository.removeBranch(args[1]);
-                }
+                checkArgs(args.length, 2);
+                Repository.removeBranch(args[1]);
                 break;
             case "reset":
-                if (checkArgs(args.length, 2)) {
-                    Repository.reset(args[1]);
-                }
+                checkArgs(args.length, 2);
+                Repository.reset(args[1]);
                 break;
             case "merge":
-                if (checkArgs(args.length, 2)) {
-                    Repository.merge(args[1]);
-                }
+                checkArgs(args.length, 2);
+                Repository.merge(args[1]);
+                break;
+            default:
+                Utils.message("No command with that name exists.");
                 break;
             // TODO: FILL THE REST IN
         }
     }
 
-    public static boolean checkArgs(int argsLength, int requiredLength) {
-        return argsLength == requiredLength;
+    public static void checkArgs(int argsLength, int requiredLength) {
+        if (argsLength != requiredLength) {
+            Utils.message("Incorrect operands.");
+            System.exit(0);
+        }
     }
 }

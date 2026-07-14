@@ -33,7 +33,7 @@ public class Repository {
                 | Commit.COMMITS_DIR.mkdir()
                 | REFS_DIR.mkdir();
         if (!result) {
-            System.out.println("setupPersistence failed!");
+            message("setupPersistence failed!");
             System.exit(0);
         }
 
@@ -61,7 +61,7 @@ public class Repository {
     public static void createBranch(String branch, String id) {
         File file = join(REFS_DIR, branch);
         if (fileExists(file)) {
-            System.out.println("A branch with that name already exists.");
+            message("A branch with that name already exists.");
             System.exit(0);
         } else {
             writeContents(file, id);
@@ -77,9 +77,9 @@ public class Repository {
     public static void removeBranch(String branch) {
         File file = join(REFS_DIR, branch);
         if (!fileExists(file)) {
-            System.out.println("A branch with that name does not exist.");
+            message("A branch with that name does not exist.");
         } else if (branch.equals(getHeadName())) {
-            System.out.println("Cannot remove the current branch.");
+            message("Cannot remove the current branch.");
         } else if (file.delete()) {
             return;
         }
@@ -115,7 +115,7 @@ public class Repository {
         if (matcher.find()) {
             return matcher.group("branchName");
         } else {
-            System.out.println("Fail to get Head's branch name");
+            message("Fail to get Head's branch name");
             System.exit(0);
             return "";
         }
@@ -159,7 +159,7 @@ public class Repository {
 
     public static void createCommit(String message, String secondParentId, Stage stage) {
         if (stage.isEmpty()) {
-            System.out.println("No changes added to the commit.");
+            message("No changes added to the commit.");
             System.exit(0);
         }
 
@@ -228,7 +228,7 @@ public class Repository {
             if (log.length() > 0) {
                 System.out.print(log.toString());
             } else {
-                System.out.println("Found no commit with that message.");
+                message("Found no commit with that message.");
             }
         }
     }
@@ -310,7 +310,7 @@ public class Repository {
     public static void checkoutFile(String file) {
         Commit commit = getHeadCommit();
         if (!commit.hasFile(file)) {
-            System.out.println("File does not exist in that commit.");
+            message("File does not exist in that commit.");
             System.exit(0);
         }
         restoreFile(file, commit.trackedFileId(file));
@@ -321,7 +321,7 @@ public class Repository {
         String id = getLongId(shortId);
         Commit commit = Commit.fromFile(id);
         if (commit.hasFile(file)) restoreFile(file, commit.trackedFileId(file));
-        else System.out.println("File does not exist in that commit.");
+        else message("File does not exist in that commit.");
     }
 
     /** Check out the given branch */
@@ -330,7 +330,7 @@ public class Repository {
         /* check that branch is not current branch */
         String currentBranch = getHeadName();
         if (branch.equals(currentBranch)) {
-            System.out.println("No need to checkout the current branch.");
+            message("No need to checkout the current branch.");
             System.exit(0);
         }
 
@@ -342,7 +342,7 @@ public class Repository {
     public static void checkBranchExists(String branch) {
         ArrayList<String> branchNames = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(REFS_DIR)));
         if (!branchNames.contains(branch)) {
-            System.out.println("No such branch exists.");
+            message("No such branch exists.");
             System.exit(0);
         }
     }
@@ -358,11 +358,19 @@ public class Repository {
         HashSet<String> filesToDelete = new HashSet<>();
         HashSet<String> filesToCreate = new HashSet<>();
 
+        for (String file : files) {
+            String fileId = sha1((Object) readContents(join(CWD, file)));
+            if (!checkOutTrackedFiles.containsKey(file)) {
+                if (!currentCommit.hasSameFile(file, fileId)) printUntrackedFileError();
+                filesToDelete.add(file);
+            }
+        }
+
         for (String file : checkOutTrackedFiles.keySet()) {
             if (files.contains(file)) {
-                if (!currentCommit.hasFile(file) && checkOutCommit.hasFile(file)) printUntrackedFileError();
-                else if (checkOutCommit.hasFile(file)) filesToOverwrite.add(file);
-                else filesToDelete.add(file);
+                String fileId = sha1((Object) readContents(join(CWD, file)));
+                if (!currentCommit.hasSameFile(file, fileId)) printUntrackedFileError();
+                else filesToOverwrite.add(file);
             } else {
                 filesToCreate.add(file);
             }
@@ -380,7 +388,7 @@ public class Repository {
 
     /** Print error message for untranced files */
     public static void printUntrackedFileError() {
-        System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+        message("There is an untracked file in the way; delete it, or add and commit it first.");
         System.exit(0);
     }
 
@@ -391,12 +399,11 @@ public class Repository {
 
     /** Return the long id with its first 6 or more digits if it exists */
     public static String getLongId(String id) {
-        if (id.length() == UID_LENGTH) return id;
         ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(Commit.COMMITS_DIR)));
         for (String file : files) {
             if (file.substring(0, id.length() - 1).equals(id)) return file;
         }
-        System.out.println("No commit with that id exists.");
+        message("No commit with that id exists.");
         System.exit(0);
         return "";
     }
@@ -414,12 +421,12 @@ public class Repository {
 
         /* check error cases */
         if (!stage.isEmpty()) {
-            System.out.println("You have uncommitted changes.");
+            message("You have uncommitted changes.");
             System.exit(0);
         }
         checkBranchExists(branch);
         if (branch.equals(getHeadName())) {
-            System.out.println("Cannot merge a branch with itself.");
+            message("Cannot merge a branch with itself.");
             System.exit(0);
         }
 
@@ -427,10 +434,10 @@ public class Repository {
 
         /* check special cases */
         if (splitPointId.equals(getBranchCommitId(branch))) {
-            System.out.println("Given branch is an ancestor of the current branch.");
+            message("Given branch is an ancestor of the current branch.");
             System.exit(0);
         } else if (splitPointId.equals(getHeadCommitId())) {
-            System.out.println("Current branch fast-forwarded.");
+            message("Current branch fast-forwarded.");
         }
 
         /* check untracked files that would be overwritten */
@@ -476,23 +483,23 @@ public class Repository {
                 }
 
             } else {
-                /* current file is deleted */
-                if (givenMap.containsKey(file) && !givenId.equals(splitId)) {
-                    /* check untracked files that would be overwritten */
-                    if (filesInCWD.contains(file)) printUntrackedFileError();
-                    /* given file is modified in different way */
-                    conflictSet.add(file);
-                }
+                /* current file is deleted and given file is modified in different way */
+                if (givenMap.containsKey(file) && !givenId.equals(splitId)) conflictSet.add(file);
             }
         }
 
         /* files in given branch, but not in split point */
         for (String file : givenRemainSet) {
-            if (!currentRemainSet.contains(file)) {
-                if (filesInCWD.contains(file)) printUntrackedFileError();
-                checkOutSet.add(file);
+            if (!currentRemainSet.contains(file)) checkOutSet.add(file);
+            else if (!givenMap.get(file).equals(currentMap.get(file))) conflictSet.add(file);
+        }
+
+        /* check untracked files */
+        for (String file : filesInCWD) {
+            if (checkOutSet.contains(file) || removeSet.contains(file) || conflictSet.contains(file)) {
+                String fileId = sha1((Object) readContents(join(CWD, file)));
+                if (!fileId.equals(currentMap.get(file))) printUntrackedFileError();
             }
-            else conflictSet.add(file);
         }
 
         /* check out files in checkOutSet */
@@ -509,7 +516,7 @@ public class Repository {
         }
 
         createCommit("Merge " + branch + " into " + getHeadName() + ".", getHeadCommitId(), stage);
-        if (!conflictSet.isEmpty()) System.out.println("Encountered a merge conflict.");
+        if (!conflictSet.isEmpty()) message("Encountered a merge conflict.");
     }
 
     /** Write the conflict file with special format */
