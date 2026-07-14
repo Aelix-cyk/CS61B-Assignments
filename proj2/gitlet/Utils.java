@@ -243,20 +243,8 @@ class Utils {
     /* FILE AND DIRECTORY CHECKING */
 
     /** Check is there is a file with same name already */
-    static boolean fileExists(String name) {
-        Path targetPath = Paths.get(name);
-        return Files.exists(targetPath) && (!Files.isDirectory(targetPath));
-    }
-
-    /** Check is there is a file with same name already */
     static boolean fileExists(File file) {
-        Path targetPath = Paths.get(file.getName());
-        return Files.exists(targetPath) && (!Files.isDirectory(targetPath));
+        return file.exists() && !file.isDirectory();
     }
 
-    /** Check is there is a directory with same name already */
-    static boolean directoryExists(String name) {
-        Path targetPath = Paths.get(name);
-        return Files.exists(targetPath) && Files.isDirectory(targetPath);
-    }
 }

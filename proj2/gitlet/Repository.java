@@ -42,7 +42,7 @@ public class Repository {
 
     /** Check if there is a gitlet system already */
     public static boolean initialCheck() {
-        return !directoryExists(GITLET_DIR.getName());
+        return !GITLET_DIR.exists();
     }
 
     /** Initial commit */
