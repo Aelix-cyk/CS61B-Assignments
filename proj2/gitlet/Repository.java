@@ -516,7 +516,7 @@ public class Repository {
             stage.addFile(join(CWD, file), currentCommit);
         }
 
-        createCommit("Merge " + branch + " into " + getHeadName() + ".", getHeadCommitId(), stage);
+        createCommit("Merged " + branch + " into " + getHeadName() + ".", getHeadCommitId(), stage);
         if (!conflictSet.isEmpty()) message("Encountered a merge conflict.");
     }
 
