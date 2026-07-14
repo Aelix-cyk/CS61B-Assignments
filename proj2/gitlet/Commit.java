@@ -116,8 +116,8 @@ public class Commit implements Serializable {
         if (secondParent != null) {
             log += "Merge: " + parent.substring(0, 5) + " " + secondParent.substring(0, 5) + "\n";
         }
-        log += "Date: " + timestamp.format(DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy XX")) + "\n" +
-                message + "\n\n";
+        log += "Date: " + timestamp.format(DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy xx"))
+                + "\n" + message + "\n\n";
         return log;
     }
 
