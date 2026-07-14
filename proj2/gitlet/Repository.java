@@ -326,7 +326,7 @@ public class Repository {
 
     /** Check out the given branch */
     public static void checkoutBranch(String branch) {
-        checkBranchExists(branch);
+        checkBranchExists(branch, "No such branch exists.");
         /* check that branch is not current branch */
         String currentBranch = getHeadName();
         if (branch.equals(currentBranch)) {
@@ -339,10 +339,10 @@ public class Repository {
     }
 
     /** Check the given branch exists or not */
-    public static void checkBranchExists(String branch) {
+    public static void checkBranchExists(String branch, String errorMessage) {
         ArrayList<String> branchNames = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(REFS_DIR)));
         if (!branchNames.contains(branch)) {
-            message("No such branch exists.");
+            message(errorMessage);
             System.exit(0);
         }
     }
@@ -425,7 +425,7 @@ public class Repository {
             message("You have uncommitted changes.");
             System.exit(0);
         }
-        checkBranchExists(branch);
+        checkBranchExists(branch, "A branch with that name does not exist.");
         if (branch.equals(getHeadName())) {
             message("Cannot merge a branch with itself.");
             System.exit(0);
