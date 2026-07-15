@@ -19,7 +19,7 @@ public class Stage implements Serializable, Dumpable {
     /** Map for files that are staging for removal */
     private HashSet<String> removalSet;
 
-    Stage () {
+    Stage() {
         additionMap = new HashMap<>();
         removalSet = new HashSet<>();
     }
@@ -52,10 +52,10 @@ public class Stage implements Serializable, Dumpable {
         }
 
         byte[] contents = readContents(file);
-        String id = sha1(contents);
+        String id = sha1((Object) contents);
         String name = file.getName();
 
-        if (!commit.hasSameFile(name ,id)) {
+        if (!commit.hasSameFile(name, id)) {
             // file that has new name or contents should be saved
             if (!this.hasSameFile(name, id)) {
                 additionMap.put(name, id);
@@ -63,15 +63,11 @@ public class Stage implements Serializable, Dumpable {
             }
         } else {
             // file that is in additionMap and has same file in current commit should be removed
-            if (additionMap.containsKey(name)) {
-                additionMap.remove(name);
-            }
+            additionMap.remove(name);
         }
 
         // remove file from removalMap
-        if (removalSet.contains(name)) {
-            removalSet.remove(name);
-        }
+        removalSet.remove(name);
     }
 
     /** Remove file from staging area. Add it to stage for removal if it's in current commit. */
@@ -123,8 +119,12 @@ public class Stage implements Serializable, Dumpable {
     @Override
     public void dump() {
         System.out.println("additionMap:");
-        for (String file : additionMap.keySet()) System.out.print(file + ", ");
+        for (String file : additionMap.keySet()) {
+            System.out.print(file + ", ");
+        }
         System.out.println("\nremovalSet:");
-        for (String file : removalSet) System.out.print(file + ", ");
+        for (String file : removalSet) {
+            System.out.print(file + ", ");
+        }
     }
 }

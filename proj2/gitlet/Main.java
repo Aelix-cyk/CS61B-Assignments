@@ -1,7 +1,7 @@
 package gitlet;
 
 /** Driver class for Gitlet, a subset of the Git version-control system.
- *  @author TODO
+ *  @author Aelix
  */
 public class Main {
 
@@ -9,7 +9,6 @@ public class Main {
      *  <COMMAND> <OPERAND1> <OPERAND2> ... 
      */
     public static void main(String[] args) {
-        // TODO: what if args is empty?
         if (args.length == 0) {
             Utils.message("Please enter a command.");
             return;
@@ -19,11 +18,11 @@ public class Main {
             Utils.message("Not in an initialized Gitlet directory.");
             return;
         }
-        switch(firstArg) {
+        switch (firstArg) {
             case "init":
                 checkArgs(args.length, 1);
                 if (!Repository.initialCheck()) {
-                   Utils.message("A Gitlet version-control system already exists in the current directory.");
+                    Utils.message("A Gitlet version-control system already exists in the current directory.");
                 } else {
                     Repository.initialize();
                 }
@@ -34,8 +33,11 @@ public class Main {
                 break;
             case "commit":
                 checkArgs(args.length, 2);
-                if (args[1].isEmpty()) Utils.message("Please enter a commit message.");
-                else Repository.createCommit(args[1]);
+                if (args[1].isEmpty()) {
+                    Utils.message("Please enter a commit message.");
+                } else {
+                    Repository.createCommit(args[1]);
+                }
                 break;
             case "rm":
                 checkArgs(args.length, 2);
@@ -84,7 +86,6 @@ public class Main {
             default:
                 Utils.message("No command with that name exists.");
                 break;
-            // TODO: FILL THE REST IN
         }
     }
 

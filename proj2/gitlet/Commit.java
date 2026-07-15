@@ -5,7 +5,6 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.io.Serializable;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +12,7 @@ import static gitlet.Utils.*;
 
 /** Represents a gitlet commit object.
  *  It represents a commit that would be stored in a file.
- *  @author TODO
+ *  @author Aelix
  */
 public class Commit implements Serializable {
 
@@ -73,14 +72,9 @@ public class Commit implements Serializable {
     /** Write commit object into file */
     public static String saveCommit(Commit commit) {
         byte[] contents = serialize(commit);
-        String id = sha1(contents);
-        writeContents(join(COMMITS_DIR, id), contents);
+        String id = sha1((Object) contents);
+        writeContents(join(COMMITS_DIR, id), (Object) contents);
         return id;
-    }
-
-    /** Load commit object from file */
-    public static Commit fromFile(File file) {
-        return readObject(file, Commit.class);
     }
 
     /** Load commit object according to id */
