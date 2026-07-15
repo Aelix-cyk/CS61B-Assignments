@@ -1,6 +1,7 @@
 package gitlet;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -176,6 +177,8 @@ public class Repository {
         /* save commit and update HEAD pointer */
         String id = Commit.saveCommit(newCommit);
         setHeadCommitId(id);
+        // DEBUG
+        appendDebugLog("new comit: " + id);
     }
 
     /** Print commit log */
@@ -359,21 +362,16 @@ public class Repository {
         HashSet<String> filesToCreate = new HashSet<>();
 
         for (String file : files) {
-            String fileId = sha1((Object) readContents(join(CWD, file)));
-            if (!checkOutTrackedFiles.containsKey(file)) {
+            if (!checkOutTrackedFiles.containsKey(file) && currentCommit.hasFile(file)) {
+                String fileId = sha1((Object) readContents(join(CWD, file)));
                 if (!currentCommit.hasSameFile(file, fileId)) printUntrackedFileError();
                 filesToDelete.add(file);
             }
         }
 
         for (String file : checkOutTrackedFiles.keySet()) {
-            if (files.contains(file)) {
-                String fileId = sha1((Object) readContents(join(CWD, file)));
-                if (!currentCommit.hasSameFile(file, fileId)) printUntrackedFileError();
-                else filesToOverwrite.add(file);
-            } else {
-                filesToCreate.add(file);
-            }
+            if (files.contains(file)) filesToOverwrite.add(file);
+            else filesToCreate.add(file);
         }
 
         for (String file : filesToDelete) restrictedDelete(join(CWD, file));
@@ -401,9 +399,7 @@ public class Repository {
     public static String getLongId(String id) {
         ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(Commit.COMMITS_DIR)));
         if (files.contains(id)) return id;
-        for (String file : files) {
-            if (file.substring(0, id.length() - 1).equals(id)) return file;
-        }
+        for (String file : files) if (file.startsWith(id)) return file;
         message("No commit with that id exists.");
         System.exit(0);
         return "";
@@ -516,7 +512,7 @@ public class Repository {
             stage.addFile(join(CWD, file), currentCommit);
         }
 
-        createCommit("Merged " + branch + " into " + getHeadName() + ".", getHeadCommitId(), stage);
+        createCommit("Merged " + branch + " into " + getHeadName() + ".", getBranchCommitId(branch), stage);
         if (!conflictSet.isEmpty()) message("Encountered a merge conflict.");
     }
 
@@ -548,17 +544,38 @@ public class Repository {
 
         /* use BFS to find split point */
         while (true) {
+            // DEBUG
+            appendDebugLog("0: " + commitsSets.get(0).toString());
+            appendDebugLog("1: " + commitsSets.get(1).toString());
             for (int i = 0; i < branches.length; i += 1) {
                 ArrayDeque<String> tempDeque = new ArrayDeque<>(commitsDeques.get(i));
                 commitsDeques.get(i).clear();
                 for (String id : tempDeque) {
-                    if (commitsSets.get(1-i).contains(id)) return id;
-                    commitsSets.get(i).add(id);
+                    if (commitsSets.get(1-i).contains(id)) {
+                        //DEBUG
+                        appendDebugLog("split point: " + id);
+                        return id;
+                    }
                     Commit commit = Commit.fromFile(id);
-                    if (commit.getParent() != null) commitsDeques.get(i).addLast(commit.getParent());
-                    if (commit.getSecondParent() != null) commitsDeques.get(i).addLast(commit.getSecondParent());
+                    if (commit.getParent() != null) {
+                        commitsDeques.get(i).addLast(commit.getParent());
+                        commitsSets.get(i).add(commit.getParent());
+                    }
+                    if (commit.getSecondParent() != null) {
+                        commitsDeques.get(i).addLast(commit.getSecondParent());
+                        commitsSets.get(i).add(commit.getSecondParent());
+                    }
                 }
             }
         }
+    }
+
+    // DEBUG
+    public static void appendDebugLog(String log) {
+        File file = join(GITLET_DIR, "debug");
+        if (!file.exists()) {
+            writeContents(file, "debug\n");
+        }
+        writeContents(file, readContentsAsString(file) + "\n" + log);
     }
 }
