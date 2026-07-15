@@ -362,16 +362,24 @@ public class Repository {
         HashSet<String> filesToCreate = new HashSet<>();
 
         for (String file : files) {
-            if (!checkOutTrackedFiles.containsKey(file) && currentCommit.hasFile(file)) {
+            if (currentCommit.hasFile(file)) {
                 String fileId = sha1((Object) readContents(join(CWD, file)));
-                if (!currentCommit.hasSameFile(file, fileId)) printUntrackedFileError();
-                filesToDelete.add(file);
+                if (currentCommit.hasSameFile(file, fileId) && !checkOutCommit.hasFile(file)) {
+                    filesToDelete.add(file);
+                }
             }
         }
 
         for (String file : checkOutTrackedFiles.keySet()) {
-            if (files.contains(file)) filesToOverwrite.add(file);
-            else filesToCreate.add(file);
+            if (files.contains(file)) {
+                String fileId = sha1((Object) readContents(join(CWD, file)));
+                if (!checkOutCommit.hasSameFile(file, fileId) && !currentCommit.hasSameFile(file, fileId)) {
+                    printUntrackedFileError();
+                }
+                filesToOverwrite.add(file);
+            } else {
+                filesToCreate.add(file);
+            }
         }
 
         for (String file : filesToDelete) restrictedDelete(join(CWD, file));
