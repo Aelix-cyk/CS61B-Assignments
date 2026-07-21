@@ -34,8 +34,8 @@ LIB = ../../library-sp21/javalib/*
 
 CPATH = "$(LIB):..:$(CLASSPATH):;$(LIB);..;$(CLASSPATH)"
 
-# All .java files in this directory.
-SRCS := $(wildcard *.java)
+# All .java files in this directory and subdirectories.
+SRCS := $(wildcard *.java core/*.java storage/*.java service/*.java util/*.java)
 
 .PHONY: default check clean
 

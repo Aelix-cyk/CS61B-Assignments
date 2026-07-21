@@ -1,6 +1,5 @@
-package gitlet;
+package gitlet.core;
 
-import java.io.File;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -8,103 +7,95 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-import static gitlet.Utils.*;
-
-/** Represents a gitlet commit object.
- *  It represents a commit that would be stored in a file.
+/** Represents a commit object in the Gitlet system.
+ *  Pure domain object — persistence is handled by the storage layer.
  *  @author Aelix
  */
 public class Commit implements Serializable {
 
-    /** The commit directory. */
-    public static final File COMMITS_DIR = join(Repository.GITLET_DIR, "commits");
-
-    /** The message of this Commit. */
+    /** The commit message. */
     private String message;
-    /** The date and time when committing. */
+
+    /** The date and time when the commit was created. */
     private ZonedDateTime timestamp;
-    /** The string of its parent's SHA-1 id. */
+
+    /** The SHA-1 id of the parent commit (null for initial commit). */
     private String parent;
-    /** The string of its second parent's SHA-1 id. */
+
+    /** The SHA-1 id of the second parent (null for non-merge commits). */
     private String secondParent;
-    /** The core map from file name to SHA-1 id. */
+
+    /** Mapping from filename to blob SHA-1 id. */
     private HashMap<String, String> trackedFiles;
 
-    Commit(String message) {
+    /** Creates a commit with the given message, no parents, empty trackedFiles. */
+    public Commit(String message) {
         this.message = message;
         timestamp = ZonedDateTime.now();
         trackedFiles = new HashMap<>();
     }
 
-    Commit(String message, Commit parentCommit, String parentId) {
+    /** Creates a commit that inherits trackedFiles from parentCommit. */
+    public Commit(String message, Commit parentCommit, String parentId) {
         this.message = message;
         timestamp = ZonedDateTime.now();
         trackedFiles = new HashMap<>(parentCommit.trackedFiles);
         parent = parentId;
     }
 
-    /** Set timestamp with epoch time */
+    /** Set timestamp to Unix epoch. Used for the initial commit. */
     public void setEpochTime() {
         timestamp = Instant.EPOCH.atZone(ZoneId.systemDefault());
     }
 
+    /** Set the second parent id (for merge commits). */
     public void setSecondParent(String id) {
         secondParent = id;
     }
 
+    /** Returns the parent commit SHA-1 id. */
     public String getParent() {
         return parent;
     }
 
+    /** Returns the second parent SHA-1 id (merge parent). */
     public String getSecondParent() {
         return secondParent;
     }
 
+    /** Returns the commit message. */
     public String getMessage() {
         return message;
     }
 
+    /** Returns the tracked files map (filename → blob SHA-1). */
     public Map<String, String> getTrackedFiles() {
         return trackedFiles;
     }
 
-
-    /** Write commit object into file */
-    public static String saveCommit(Commit commit) {
-        byte[] contents = serialize(commit);
-        String id = sha1((Object) contents);
-        writeContents(join(COMMITS_DIR, id), (Object) contents);
-        return id;
-    }
-
-    /** Load commit object according to id */
-    public static Commit fromFile(String id) {
-        return readObject(join(COMMITS_DIR, id), Commit.class);
-    }
-
-    /** Check if this commit has the file */
+    /** Returns true if this commit tracks a file with the given name. */
     public boolean hasFile(String name) {
         return trackedFiles.containsKey(name);
     }
 
-    /** Check if this commit has the same file */
+    /** Returns true if this commit tracks a file with the given name and blob id. */
     public boolean hasSameFile(String name, String id) {
         return trackedFiles.containsKey(name) && trackedFiles.get(name).equals(id);
     }
 
-    /** Add files from map to trackedFiles */
+    /** Add all entries from the given map to trackedFiles. */
     public void addFromMap(Map<String, String> addMap) {
         trackedFiles.putAll(addMap);
     }
 
-    /** Remove files in Set from trackedFiles */
+    /** Remove all files in the given set from trackedFiles. */
     public void removeFromSet(Set<String> set) {
         for (String name : set) {
             trackedFiles.remove(name);
         }
     }
 
-    /** Return a string that contains the commit log */
+    /** Return a formatted log entry string for this commit. */
     public String dumpLog(String id) {
         String log = "===\n" + "commit " + id + "\n";
         if (secondParent != null) {
@@ -115,9 +106,8 @@ public class Commit implements Serializable {
         return log;
     }
 
-    /** Return the sha-1 id of file from trackedFiles */
+    /** Returns the blob SHA-1 id for the given file. */
     public String trackedFileId(String file) {
         return trackedFiles.get(file);
     }
-
 }

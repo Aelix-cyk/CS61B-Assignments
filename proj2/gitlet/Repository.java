@@ -1,164 +1,98 @@
 package gitlet;
 
-import java.io.File;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import gitlet.core.Blob;
+import gitlet.core.Commit;
+import gitlet.core.Index;
+import gitlet.service.CheckoutService;
+import gitlet.service.MergeService;
+import gitlet.service.MergeService.MergePlan;
+import gitlet.service.StatusService;
+import gitlet.storage.Persistence;
+import gitlet.storage.RefStore;
+
+import java.util.List;
 
 import static gitlet.Utils.*;
+import static gitlet.util.Paths.*;
 
-/** Represents a gitlet repository.
- *  It contains the main logic of gitlet.
+/** Gitlet repository facade.
+ *  Holds all components and exposes command-level instance methods.
  *  @author Aelix
  */
 public class Repository {
 
-    /** The current working directory. */
-    public static final File CWD = new File(System.getProperty("user.dir"));
-    /** The .gitlet directory. */
-    public static final File GITLET_DIR = join(CWD, ".gitlet");
-    /** The blobs directory. */
-    public static final File BLOBS_DIR = join(GITLET_DIR, "blobs");
-    /** The refs directory. */
-    public static final File REFS_DIR = join(GITLET_DIR, "refs");
-    /** The head file */
-    public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
+    private final Persistence persistence;
+    private final RefStore refStore;
+    private final CheckoutService checkoutService;
+    private final MergeService mergeService;
+    private final StatusService statusService;
 
-    /** Setup files and directories for persistence */
-    public static void setupPersistence() {
-        boolean result;
-
-        result = GITLET_DIR.mkdir()
-                | BLOBS_DIR.mkdir()
-                | Commit.COMMITS_DIR.mkdir()
-                | REFS_DIR.mkdir();
-        if (!result) {
-            message("setupPersistence failed!");
-            System.exit(0);
-        }
-
-        Stage.saveStage(new Stage());
+    public Repository() {
+        persistence = new Persistence();
+        refStore = new RefStore();
+        checkoutService = new CheckoutService(persistence, refStore);
+        mergeService = new MergeService(persistence, refStore);
+        statusService = new StatusService(persistence, refStore);
     }
 
-    /** Check if there is a gitlet system already */
-    public static boolean initialCheck() {
-        return !GITLET_DIR.exists();
+    /* ==================== Convenience Delegators ==================== */
+
+    public String getHeadCommitId() {
+        return refStore.getBranchCommitId(refStore.getCurrentBranchName());
     }
 
-    /** Initial commit */
-    public static void initialize() {
-        String defaultBranch = "master";
-        Commit initialCommit = new Commit("initial commit");
-
-        setupPersistence();
-        initialCommit.setEpochTime();
-        String id = Commit.saveCommit(initialCommit);
-        createBranch(defaultBranch, id);
-        setHead(defaultBranch);
+    public Commit getHeadCommit() {
+        return persistence.loadCommit(getHeadCommitId());
     }
 
-    /** Create a branch with given name and commit id */
-    public static void createBranch(String branch, String id) {
-        File file = join(REFS_DIR, branch);
-        if (fileExists(file)) {
-            message("A branch with that name already exists.");
-            System.exit(0);
+    public String getCurrentBranchName() {
+        return refStore.getCurrentBranchName();
+    }
+
+    public Index getIndex() {
+        return persistence.loadIndex();
+    }
+
+    public void saveIndex(Index index) {
+        Persistence.saveIndex(index);
+    }
+
+    /* ==================== init ==================== */
+
+    public void init() {
+        if (!Persistence.repoExists()) {
+            String defaultBranch = "master";
+            Commit initialCommit = new Commit("initial commit");
+            Persistence.init();
+            initialCommit.setEpochTime();
+            String id = persistence.saveCommit(initialCommit);
+            refStore.createBranch(defaultBranch, id);
+            refStore.setHeadRef(defaultBranch);
         } else {
-            writeContents(file, id);
+            message("A Gitlet version-control system already exists in the current directory.");
         }
     }
 
-    /** Create a branch with given name */
-    public static void createBranch(String branch) {
-        createBranch(branch, getHeadCommitId());
-    }
+    /* ==================== add ==================== */
 
-    /** Remove the branch */
-    public static void removeBranch(String branch) {
-        File file = join(REFS_DIR, branch);
-        if (!fileExists(file)) {
-            message("A branch with that name does not exist.");
-        } else if (branch.equals(getHeadName())) {
-            message("Cannot remove the current branch.");
-        } else if (file.delete()) {
-            return;
+    public void add(String filename) {
+        Index index = getIndex();
+        Blob blob = index.addFile(join(CWD, filename), getHeadCommit());
+        if (blob != null) {
+            persistence.saveBlob(blob);
         }
-        System.exit(0);
+        saveIndex(index);
     }
 
-    /** Set the branch in HEAD */
-    public static void setHead(String branch) {
-        writeContents(HEAD_FILE, REFS_DIR.getName() + "/" + branch);
+    /* ==================== commit ==================== */
+
+    public void commit(String message) {
+        commitWithParent(message, null);
     }
 
-    /** Set the commit id that HEAD point to */
-    public static void setHeadCommitId(String id) {
-        String branch = readContentsAsString(HEAD_FILE);
-        writeContents(join(GITLET_DIR, branch), id);
-    }
-
-    /** Get the commit id that HEAD point to */
-    public static String getHeadCommitId() {
-        String branch = readContentsAsString(HEAD_FILE);
-        return readContentsAsString(join(GITLET_DIR, branch));
-    }
-
-    /** Get the commit object that HEAD point to */
-    public static Commit getHeadCommit() {
-        return readObject(join(Commit.COMMITS_DIR, getHeadCommitId()), Commit.class);
-    }
-
-    /** Get the branch name of current HEAD */
-    public static String getHeadName() {
-        Pattern pattern = Pattern.compile("refs/(?<branchName>\\w+)");
-        Matcher matcher = pattern.matcher(readContentsAsString(HEAD_FILE));
-        if (matcher.find()) {
-            return matcher.group("branchName");
-        } else {
-            message("Fail to get Head's branch name");
-            System.exit(0);
-            return "";
-        }
-    }
-
-    /** Get the commit object that the branch point to */
-    public static Commit getBranchCommit(String branch) {
-        return readObject(join(Commit.COMMITS_DIR, getBranchCommitId(branch)), Commit.class);
-    }
-
-    /** Get the branch's commit id */
-    public static String getBranchCommitId(String branch) {
-        return readContentsAsString(join(REFS_DIR, branch));
-    }
-
-    /** Add file to staging area */
-    public static void addToStage(String name) {
-        Stage stage = Stage.fromFile();
-        stage.addFile(join(CWD, name), getHeadCommit());
-        Stage.saveStage(stage);
-    }
-
-    /** Remove file from staging area, add it to stage for removal */
-    public static void removeFromStage(String name) {
-        Stage stage = Stage.fromFile();
-        stage.removeFile(join(CWD, name), getHeadCommit());
-        Stage.saveStage(stage);
-    }
-
-    /** Write blob into file */
-    public static void saveBlob(String id, byte[] contents) {
-        File blob = join(BLOBS_DIR, id);
-        writeContents(blob, (Object) contents);
-    }
-
-    /** Create a new commit and move HEAD pointer to it */
-    public static void createCommit(String message) {
-        Stage stage = Stage.fromFile();
-        createCommit(message, null, stage);
-    }
-
-    public static void createCommit(String message, String secondParentId, Stage stage) {
-        if (stage.isEmpty()) {
+    public void commitWithParent(String message, String secondParentId) {
+        Index index = getIndex();
+        if (index.isEmpty()) {
             message("No changes added to the commit.");
             System.exit(0);
         }
@@ -169,442 +103,180 @@ public class Repository {
             newCommit.setSecondParent(secondParentId);
         }
 
-        /* process files in staging area */
-        newCommit.addFromMap(stage.getAdditionMap());
-        newCommit.removeFromSet(stage.getRemovalSet());
-        stage.clear();
-        Stage.saveStage(stage);
+        newCommit.addFromMap(index.getAdditionMap());
+        newCommit.removeFromSet(index.getRemovalSet());
+        index.clear();
+        saveIndex(index);
 
-        /* save commit and update HEAD pointer */
-        String id = Commit.saveCommit(newCommit);
-        setHeadCommitId(id);
+        String id = persistence.saveCommit(newCommit);
+        refStore.setBranchCommitId(getCurrentBranchName(), id);
     }
 
-    /** Print commit log */
-    public static void log() {
+    /* ==================== rm ==================== */
+
+    public void rm(String filename) {
+        Index index = getIndex();
+        index.removeFile(join(CWD, filename), getHeadCommit());
+        saveIndex(index);
+    }
+
+    /* ==================== log ==================== */
+
+    public void log() {
         Commit commit = getHeadCommit();
         String id = getHeadCommitId();
-        StringBuilder log = new StringBuilder();
+        StringBuilder logStr = new StringBuilder();
 
         while (true) {
-            log.append(commit.dumpLog(id));
+            logStr.append(commit.dumpLog(id));
             id = commit.getParent();
             if (id != null) {
-                commit = Commit.fromFile(id);
+                commit = persistence.loadCommit(id);
             } else {
                 break;
             }
         }
-        System.out.print(log);
+        System.out.print(logStr);
     }
 
-    /** Print global commit log */
-    public static void globalLog() {
-        List<String> fileList = plainFilenamesIn(Commit.COMMITS_DIR);
-        StringBuilder log = new StringBuilder();
+    /* ==================== global-log ==================== */
 
-        if (fileList != null) {
-            for (String id : fileList) {
-                Commit commit = Commit.fromFile(id);
-                log.append(commit.dumpLog(id));
+    public void globalLog() {
+        List<String> ids = persistence.allCommitIds();
+        if (ids != null) {
+            for (String id : ids) {
+                Commit commit = persistence.loadCommit(id);
+                System.out.print(commit.dumpLog(id));
             }
-            System.out.print(log);
         }
     }
 
-    /** Find commits with given commit message */
-    public static void findCommit(String message) {
-        List<String> fileList = plainFilenamesIn(Commit.COMMITS_DIR);
-        StringBuilder log = new StringBuilder();
+    /* ==================== find ==================== */
 
-        if (fileList != null) {
-            for (String id : fileList) {
-                String commitMessage = Commit.fromFile(id).getMessage();
+    public void find(String message) {
+        List<String> ids = persistence.allCommitIds();
+        StringBuilder result = new StringBuilder();
 
+        if (ids != null) {
+            for (String id : ids) {
+                String commitMessage = persistence.loadCommit(id).getMessage();
                 if (commitMessage.contains(message)) {
-                    log.append(id);
-                    log.append("\n");
+                    result.append(id).append("\n");
                 }
             }
-
-            if (log.length() > 0) {
-                System.out.print(log);
+            if (result.length() > 0) {
+                System.out.print(result);
             } else {
                 message("Found no commit with that message.");
             }
         }
     }
 
-    /** Show the status of gitlet system */
-    public static void status() {
-        StringBuilder output = new StringBuilder();
+    /* ==================== status ==================== */
 
-        /* status of branches */
-        ArrayList<String> branchNames = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(REFS_DIR)));
-        String currentBranch = getHeadName();
-
-        output.append("=== Branches ===\n");
-        branchNames.remove(currentBranch);
-        branchNames.add("*" + currentBranch);
-        output.append(sortedStatusString(branchNames));
-
-        /* status of staged files and removed files */
-        Stage stage = Stage.fromFile();
-        Map<String, String> additionMap = stage.getAdditionMap();
-        Set<String> removalSet = stage.getRemovalSet();
-
-        output.append("\n=== Staged Files ===\n");
-        output.append(sortedStatusString(additionMap.keySet()));
-        output.append("\n=== Removed Files ===\n");
-        output.append(sortedStatusString(removalSet));
-
-        /* status of modifications that are not staged for commit */
-        List<String> filesInCWD = plainFilenamesIn(CWD);
-        Commit currentCommit = getHeadCommit();
-        Map<String, String> commitMap = currentCommit.getTrackedFiles();
-        HashSet<String> modifiedFiles = new HashSet<>();
-        HashSet<String> untrackedFiles = new HashSet<>();
-        if (filesInCWD != null) {
-            /* traverse files in current directory */
-            for (String file : filesInCWD) {
-                String id = sha1((Object) readContents(join(CWD, file)));
-                /* not in current commit and not in additionMap */
-                if (!currentCommit.hasFile(file) && !stage.hasFile(file)) {
-                    untrackedFiles.add(file);
-                }
-
-                if (!stage.hasSameFile(file, id)) {
-                    /* staged for addition but changed */
-                    if (stage.hasFile(file)) {
-                        modifiedFiles.add(file + " (modified)");
-                    }
-                    /* tracked in commit but changed and not staged */
-                    if (currentCommit.hasFile(file) && !currentCommit.hasSameFile(file, id)) {
-                        modifiedFiles.add(file + " (modified)");
-                    }
-                }
-            }
-
-            /* find deleted files */
-            for (String file : commitMap.keySet()) {
-                if (!filesInCWD.contains(file) && !removalSet.contains(file)) {
-                    modifiedFiles.add(file + " (deleted)");
-                }
-            }
-            for (String file : additionMap.keySet()) {
-                if (!filesInCWD.contains(file)) {
-                    modifiedFiles.add(file + " (deleted)");
-                }
-            }
-        }
-
-        output.append("\n=== Modifications Not Staged For Commit ===\n");
-        output.append(sortedStatusString(modifiedFiles));
-        output.append("\n=== Untracked Files ===\n");
-        output.append(sortedStatusString(untrackedFiles)).append("\n");
-
-        System.out.print(output);
+    public void status() {
+        System.out.print(statusService.buildStatusString());
     }
 
-    public static String sortedStatusString(Collection<String> collection) {
-        String[] files = collection.toArray(new String[0]);
-        Arrays.sort(files);
-        StringBuilder sorted = new StringBuilder();
-        for (String file : files) {
-            sorted.append(file).append("\n");
-        }
-        return sorted.toString();
+    /* ==================== checkout ==================== */
+
+    public void checkoutFile(String filename) {
+        checkoutService.checkoutFileFromHead(filename);
     }
 
-    /** Check out the given file in previous commit */
-    public static void checkoutFile(String file) {
-        Commit commit = getHeadCommit();
-        if (!commit.hasFile(file)) {
-            message("File does not exist in that commit.");
+    public void checkoutCommitFile(String commitId, String filename) {
+        checkoutService.checkoutFileFromCommit(commitId, filename);
+    }
+
+    public void checkoutBranch(String branchName) {
+        if (!refStore.branchExists(branchName)) {
+            message("No such branch exists.");
             System.exit(0);
         }
-        restoreFile(file, commit.trackedFileId(file));
-    }
-
-    /** Check out the given file in given commit */
-    public static void checkoutCommitFile(String shortId, String file) {
-        String id = getLongId(shortId);
-        Commit commit = Commit.fromFile(id);
-        if (commit.hasFile(file)) {
-            restoreFile(file, commit.trackedFileId(file));
-        } else {
-            message("File does not exist in that commit.");
-        }
-    }
-
-    /** Check out the given branch */
-    public static void checkoutBranch(String branch) {
-        checkBranchExists(branch, "No such branch exists.");
-        /* check that branch is not current branch */
-        String currentBranch = getHeadName();
-        if (branch.equals(currentBranch)) {
+        if (branchName.equals(getCurrentBranchName())) {
             message("No need to checkout the current branch.");
             System.exit(0);
         }
-
-        checkoutCommit(getBranchCommitId(branch));
-        setHead(branch);
+        checkoutService.checkoutBranch(branchName);
     }
 
-    /** Check the given branch exists or not */
-    public static void checkBranchExists(String branch, String errorMessage) {
-        ArrayList<String> branchNames = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(REFS_DIR)));
-        if (!branchNames.contains(branch)) {
-            message(errorMessage);
-            System.exit(0);
-        }
+    /* ==================== branch ==================== */
+
+    public void createBranch(String branchName) {
+        refStore.createBranch(branchName, getHeadCommitId());
     }
 
-    /** Checkout the given commit */
-    public static void checkoutCommit(String id) {
-        /* check untracked files that would be overwritten */
-        ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(CWD)));
-        Commit currentCommit = getHeadCommit();
-        Commit checkOutCommit = Commit.fromFile(id);
-        Map<String, String> checkOutTrackedFiles = checkOutCommit.getTrackedFiles();
-        HashSet<String> filesToOverwrite = new HashSet<>();
-        HashSet<String> filesToDelete = new HashSet<>();
-        HashSet<String> filesToCreate = new HashSet<>();
+    /* ==================== rm-branch ==================== */
 
-        for (String file : files) {
-            if (currentCommit.hasFile(file)) {
-                String fileId = sha1((Object) readContents(join(CWD, file)));
-                if (currentCommit.hasSameFile(file, fileId) && !checkOutCommit.hasFile(file)) {
-                    filesToDelete.add(file);
-                }
-            }
-        }
-
-        for (String file : checkOutTrackedFiles.keySet()) {
-            if (files.contains(file)) {
-                String fileId = sha1((Object) readContents(join(CWD, file)));
-                if (!checkOutCommit.hasSameFile(file, fileId) && !currentCommit.hasSameFile(file, fileId)) {
-                    printUntrackedFileError();
-                }
-                filesToOverwrite.add(file);
-            } else {
-                filesToCreate.add(file);
-            }
-        }
-
-        for (String file : filesToDelete) {
-            restrictedDelete(join(CWD, file));
-        }
-        for (String file : filesToCreate) {
-            restoreFile(file, checkOutTrackedFiles.get(file));
-        }
-        for (String file : filesToOverwrite) {
-            String currentId = sha1((Object) readContents(join(CWD, file)));
-            String checkOutId = checkOutTrackedFiles.get(file);
-            if (!currentId.equals(checkOutId)) {
-                restoreFile(file, checkOutId);
-            }
-        }
-        Stage.saveStage(new Stage());
+    public void removeBranch(String branchName) {
+        refStore.deleteBranch(branchName);
     }
 
-    /** Print error message for untranced files */
-    public static void printUntrackedFileError() {
-        message("There is an untracked file in the way; delete it, or add and commit it first.");
-        System.exit(0);
+    /* ==================== reset ==================== */
+
+    public void reset(String shortId) {
+        String id = persistence.resolveShortId(shortId);
+        checkoutService.checkoutCommit(id);
+        refStore.setBranchCommitId(getCurrentBranchName(), id);
     }
 
-    /** Restore given file from blobs by sha-1 id */
-    public static void restoreFile(String file, String id) {
-        writeContents(join(CWD, file), (Object) readContents(join(BLOBS_DIR, id)));
-    }
+    /* ==================== merge ==================== */
 
-    /** Return the long id with its first 6 or more digits if it exists */
-    public static String getLongId(String id) {
-        ArrayList<String> files = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(Commit.COMMITS_DIR)));
-        if (files.contains(id)) {
-            return id;
-        }
-        for (String file : files) {
-            if (file.startsWith(id)) {
-                return file;
-            }
-        }
-        message("No commit with that id exists.");
-        System.exit(0);
-        return "";
-    }
-
-    /** Reset with given commit id */
-    public static void reset(String shortId) {
-        String id = getLongId(shortId);
-        checkoutCommit(id);
-        setHeadCommitId(id);
-    }
-
-    /** Merge the files in given branch to current branch */
-    public static void merge(String branch) {
-        Stage stage = Stage.fromFile();
-        /* check error cases */
-        if (!stage.isEmpty()) {
+    public void merge(String branchName) {
+        if (!getIndex().isEmpty()) {
             message("You have uncommitted changes.");
             System.exit(0);
         }
-        checkBranchExists(branch, "A branch with that name does not exist.");
-        if (branch.equals(getHeadName())) {
+        if (!refStore.branchExists(branchName)) {
+            message("A branch with that name does not exist.");
+            System.exit(0);
+        }
+        if (branchName.equals(getCurrentBranchName())) {
             message("Cannot merge a branch with itself.");
             System.exit(0);
         }
-        String splitPointId = findSplitPoint(getHeadName(), branch);
-        /* check special cases */
-        if (splitPointId.equals(getBranchCommitId(branch))) {
+
+        String splitPointId = mergeService.findSplitPoint(getCurrentBranchName(), branchName);
+
+        if (splitPointId.equals(refStore.getBranchCommitId(branchName))) {
             message("Given branch is an ancestor of the current branch.");
             System.exit(0);
         } else if (splitPointId.equals(getHeadCommitId())) {
             message("Current branch fast-forwarded.");
         }
-        /* check untracked files that would be overwritten */
-        ArrayList<String> filesInCWD = new ArrayList<>(Objects.requireNonNull(plainFilenamesIn(CWD)));
-        Commit splitCommit = Commit.fromFile(splitPointId);
+
+        Commit splitCommit = persistence.loadCommit(splitPointId);
         Commit currentCommit = getHeadCommit();
-        Commit givenCommit = getBranchCommit(branch);
-        HashMap<String, String> splitMap = new HashMap<>(splitCommit.getTrackedFiles());
-        HashMap<String, String> currentMap = new HashMap<>(currentCommit.getTrackedFiles());
-        HashMap<String, String> givenMap = new HashMap<>(givenCommit.getTrackedFiles());
-        // files to be checked out, removed and conflict
-        HashSet<String> checkOutSet = new HashSet<>();
-        HashSet<String> removeSet = new HashSet<>();
-        HashSet<String> conflictSet = new HashSet<>();
-        HashSet<String> currentRemainSet = new HashSet<>(currentMap.keySet());
-        HashSet<String> givenRemainSet = new HashSet<>(givenMap.keySet());
+        Commit givenCommit = persistence.loadCommit(refStore.getBranchCommitId(branchName));
 
-        for (String file : splitMap.keySet()) {
-            String currentId = currentMap.get(file);
-            String splitId = splitMap.get(file);
-            String givenId = givenMap.get(file);
+        MergePlan plan = mergeService.classifyFiles(splitCommit, currentCommit, givenCommit);
+        mergeService.checkUntrackedOverwrite(plan, currentCommit);
 
-            currentRemainSet.remove(file);
-            givenRemainSet.remove(file);
-            if (currentMap.containsKey(file) && currentId.equals(splitId)) {
-                /* current file is clean */
-                /* file is modified or removed in given branch */
-                if (givenMap.containsKey(file)) {
-                    if (!currentId.equals(givenId)) {
-                        checkOutSet.add(file);
-                    }
-                } else {
-                    removeSet.add(file);
-                }
-            } else if (currentMap.containsKey(file) && !currentId.equals((splitId))) {
-                /* current file is modified */
-                if (!givenMap.containsKey(file)) {
-                    /* given file is removed */
-                    conflictSet.add(file);
-                } else if (!givenId.equals(currentId) && !givenId.equals(splitId)) {
-                    /* given file is modified in different way */
-                    conflictSet.add(file);
-                }
-
-            } else {
-                /* current file is deleted and given file is modified in different way */
-                if (givenMap.containsKey(file) && !givenId.equals(splitId)) {
-                    conflictSet.add(file);
-                }
+        Index index = getIndex();
+        for (String file : plan.filesToCheckout) {
+            checkoutService.restoreFile(file, givenCommit.trackedFileId(file));
+            Blob blob = index.addFile(join(CWD, file), currentCommit);
+            if (blob != null) {
+                persistence.saveBlob(blob);
             }
         }
-
-        /* files in given branch, but not in split point */
-        for (String file : givenRemainSet) {
-            if (!currentRemainSet.contains(file)) {
-                checkOutSet.add(file);
-            } else if (!givenMap.get(file).equals(currentMap.get(file))) {
-                conflictSet.add(file);
+        for (String file : plan.filesToRemove) {
+            index.removeFile(join(CWD, file), currentCommit);
+        }
+        for (String file : plan.filesToConflict) {
+            mergeService.writeConflictFile(file, currentCommit, givenCommit);
+            Blob blob = index.addFile(join(CWD, file), currentCommit);
+            if (blob != null) {
+                persistence.saveBlob(blob);
             }
         }
+        saveIndex(index);
 
-        /* check untracked files */
-        for (String file : filesInCWD) {
-            if (checkOutSet.contains(file) || removeSet.contains(file) || conflictSet.contains(file)) {
-                String fileId = sha1((Object) readContents(join(CWD, file)));
-                if (!fileId.equals(currentMap.get(file))) {
-                    printUntrackedFileError();
-                }
-            }
-        }
+        String mergeMessage = "Merged " + branchName + " into " + getCurrentBranchName() + ".";
+        commitWithParent(mergeMessage, refStore.getBranchCommitId(branchName));
 
-        /* check out files in checkOutSet */
-        for (String file : checkOutSet) {
-            restoreFile(file, givenCommit.trackedFileId(file));
-            stage.addFile(join(CWD, file), currentCommit);
-        }
-        /* remove files in removeSet */
-        for (String file : removeSet) {
-            stage.removeFile(join(CWD, file), currentCommit);
-        }
-        /* update files in conflictSet */
-        for (String file : conflictSet) {
-            writeConflictFile(file, currentCommit, givenCommit);
-            stage.addFile(join(CWD, file), currentCommit);
-        }
-
-        createCommit("Merged " + branch + " into " + getHeadName() + ".", getBranchCommitId(branch), stage);
-        if (!conflictSet.isEmpty()) {
+        if (!plan.filesToConflict.isEmpty()) {
             message("Encountered a merge conflict.");
-        }
-    }
-
-    /** Write the conflict file with special format */
-    public static void writeConflictFile(String file, Commit current, Commit given) {
-        byte[] currentContents, givenContents;
-        if (current.hasFile(file)) {
-            currentContents = readContents(join(BLOBS_DIR, current.trackedFileId(file)));
-        } else {
-            currentContents = new byte[]{};
-        }
-        if (given.hasFile(file)) {
-            givenContents = readContents(join(BLOBS_DIR, given.trackedFileId(file)));
-        } else {
-            givenContents = new byte[]{};
-        }
-
-        writeContents(join(CWD, file), "<<<<<<< HEAD\n", currentContents, "=======\n", givenContents, ">>>>>>>\n");
-    }
-
-    /** Find the split point between two branch */
-    public static String findSplitPoint(String branchA, String branchB) {
-        String[] branches = new String[]{branchA, branchB};
-        List<HashSet<String>> commitsSets = new ArrayList<>();
-        List<ArrayDeque<String>> commitsDeques = new ArrayList<>();
-        /* initialize */
-        for (int i = 0; i < branches.length; i += 1) {
-            commitsSets.add(new HashSet<>());
-            commitsDeques.add(new ArrayDeque<>());
-        }
-        for (int i = 0; i < branches.length; i += 1) {
-            commitsDeques.get(i).addLast(getBranchCommitId(branches[i]));
-            commitsSets.get(i).add(commitsDeques.get(i).getFirst());
-        }
-
-        /* use BFS to find split point */
-        while (true) {
-            for (int i = 0; i < branches.length; i += 1) {
-                ArrayDeque<String> tempDeque = new ArrayDeque<>(commitsDeques.get(i));
-                commitsDeques.get(i).clear();
-                for (String id : tempDeque) {
-                    if (commitsSets.get(1 - i).contains(id)) {
-                        return id;
-                    }
-                    Commit commit = Commit.fromFile(id);
-                    if (commit.getParent() != null) {
-                        commitsDeques.get(i).addLast(commit.getParent());
-                        commitsSets.get(i).add(commit.getParent());
-                    }
-                    if (commit.getSecondParent() != null) {
-                        commitsDeques.get(i).addLast(commit.getSecondParent());
-                        commitsSets.get(i).add(commit.getSecondParent());
-                    }
-                }
-            }
         }
     }
 }
