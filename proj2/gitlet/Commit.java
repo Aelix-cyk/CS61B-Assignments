@@ -1,6 +1,5 @@
 package gitlet;
 
-import java.io.File;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -8,16 +7,11 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-import static gitlet.Utils.*;
-
 /** Represents a gitlet commit object.
  *  It represents a commit that would be stored in a file.
  *  @author Aelix
  */
 public class Commit implements Serializable {
-
-    /** The commit directory. */
-    public static final File COMMITS_DIR = join(Repository.GITLET_DIR, "commits");
 
     /** The message of this Commit. */
     private String message;
@@ -68,20 +62,6 @@ public class Commit implements Serializable {
         return trackedFiles;
     }
 
-
-    /** Write commit object into file */
-    public static String saveCommit(Commit commit) {
-        byte[] contents = serialize(commit);
-        String id = sha1((Object) contents);
-        writeContents(join(COMMITS_DIR, id), (Object) contents);
-        return id;
-    }
-
-    /** Load commit object according to id */
-    public static Commit fromFile(String id) {
-        return readObject(join(COMMITS_DIR, id), Commit.class);
-    }
-
     /** Check if this commit has the file */
     public boolean hasFile(String name) {
         return trackedFiles.containsKey(name);
@@ -106,13 +86,15 @@ public class Commit implements Serializable {
 
     /** Return a string that contains the commit log */
     public String dumpLog(String id) {
-        String log = "===\n" + "commit " + id + "\n";
+        StringBuilder log = new StringBuilder();
+        log.append("===\n").append("commit ").append(id).append("\n");
         if (secondParent != null) {
-            log += "Merge: " + parent.substring(0, 7) + " " + secondParent.substring(0, 7) + "\n";
+            log.append("Merge: ").append(parent, 0, 7).append(" ");
+            log.append(secondParent, 0, 7).append("\n");
         }
-        log += "Date: " + timestamp.format(DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy xx"))
-                + "\n" + message + "\n\n";
-        return log;
+        log.append("Date: ").append(timestamp.format(DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy xx")));
+        log.append("\n").append(message).append("\n\n");
+        return log.toString();
     }
 
     /** Return the sha-1 id of file from trackedFiles */

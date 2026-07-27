@@ -14,34 +14,30 @@ public class Main {
             return;
         }
         String firstArg = args[0];
-        if (!firstArg.equals("init") && !Repository.GITLET_DIR.exists()) {
+        if (!firstArg.equals("init") && !Paths.GITLET_DIR.exists()) {
             Utils.message("Not in an initialized Gitlet directory.");
             return;
         }
         switch (firstArg) {
             case "init":
                 checkArgs(args.length, 1);
-                if (!Repository.initialCheck()) {
-                    Utils.message("A Gitlet version-control system already exists in the current directory.");
-                } else {
-                    Repository.initialize();
-                }
+                Repository.init();
                 break;
             case "add":
                 checkArgs(args.length, 2);
-                Repository.addToStage(args[1]);
+                Repository.add(args[1]);
                 break;
             case "commit":
                 checkArgs(args.length, 2);
                 if (args[1].isEmpty()) {
                     Utils.message("Please enter a commit message.");
                 } else {
-                    Repository.createCommit(args[1]);
+                    Repository.commit(args[1]);
                 }
                 break;
             case "rm":
                 checkArgs(args.length, 2);
-                Repository.removeFromStage(args[1]);
+                Repository.rm(args[1]);
                 break;
             case "log":
                 Repository.log();
@@ -51,29 +47,21 @@ public class Main {
                 break;
             case "find":
                 checkArgs(args.length, 2);
-                Repository.findCommit(args[1]);
+                Repository.find(args[1]);
                 break;
             case "status":
                 Repository.status();
                 break;
             case "checkout":
-                if (args.length == 2) {
-                    Repository.checkoutBranch(args[1]);
-                } else if (args.length == 3 && args[1].equals("--")) {
-                    Repository.checkoutFile(args[2]);
-                } else if (args.length == 4 && args[2].equals("--")) {
-                    Repository.checkoutCommitFile(args[1], args[3]);
-                } else {
-                    Utils.message("Incorrect operands.");
-                }
+                Repository.checkout(args);
                 break;
             case "branch":
                 checkArgs(args.length, 2);
-                Repository.createBranch(args[1]);
+                Repository.branch(args[1]);
                 break;
             case "rm-branch":
                 checkArgs(args.length, 2);
-                Repository.removeBranch(args[1]);
+                Repository.rmBranch(args[1]);
                 break;
             case "reset":
                 checkArgs(args.length, 2);
