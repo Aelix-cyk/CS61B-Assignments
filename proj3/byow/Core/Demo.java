@@ -11,15 +11,17 @@ import java.util.Random;
  */
 public class Demo {
 
-    private static final int WIDTH = 120;
-    private static final int HEIGHT = 80;
+    private static final int WIDTH = 80;
+    private static final int HEIGHT = 40;
 
     public static void main(String[] args) {
+        Engine engine = new Engine();
         TERenderer ter = new TERenderer();
         ter.initialize(WIDTH, HEIGHT);
 
         long seed = new Random().nextLong();
-        TETile[][] world = WorldGenerator.generateWorld(WIDTH, HEIGHT, seed);
+        TETile[][] world = engine.interactWithInputString("n5197880843569031643s");
+        //TETile[][] world = engine.interactWithInputString("n12345s");
 
         ter.renderFrame(world);
     }
