@@ -194,7 +194,7 @@ public class Engine {
                 drawHUD();   // just refresh the HUD (mouse-hover description)
             }
         }
-        finishGameLoop(parsingSeed, sawLoad, sawQuit, seedDigits, true);
+        finishGameLoop(parsingSeed, seedDigits, true);
     }
 
     /** String mode: blocks on each key from the source. */
@@ -216,7 +216,7 @@ public class Engine {
                 drawHUD();
             }
         }
-        finishGameLoop(parsingSeed, sawLoad, sawQuit, seedDigits, render);
+        finishGameLoop(parsingSeed, seedDigits, render);
     }
 
     private static boolean mouseMoved(double lastX, double lastY) {
@@ -282,13 +282,15 @@ public class Engine {
     }
 
     /** Handles the end-of-input world fallback (default seed / pending seed). */
-    private void finishGameLoop(boolean parsingSeed, boolean sawLoad, boolean sawQuit,
-                                StringBuilder seedDigits, boolean render) {
+    private void finishGameLoop(boolean parsingSeed, StringBuilder seedDigits, boolean render) {
         if (parsingSeed && seedDigits.length() > 0) {
             world = WorldGenerator.generateWorld(WIDTH, HEIGHT,
                     Long.parseLong(seedDigits.toString()));
             spawnAvatar();
-        } else if (world == null && !sawLoad && !sawQuit) {
+        } else if (world == null) {
+            // no world was ever produced (e.g., load with no save, quit before a game,
+            // or garbage input): fall back to a default world (seed 0), exactly like
+            // keyboard mode does. interactWithInputString must never return null.
             world = WorldGenerator.generateWorld(WIDTH, HEIGHT, 0L);
             spawnAvatar();
         }

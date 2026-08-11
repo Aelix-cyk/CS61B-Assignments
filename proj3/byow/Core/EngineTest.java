@@ -49,17 +49,21 @@ public class EngineTest {
     }
 
     @Test
-    public void testLoadWithoutSaveReturnsNull() {
+    public void testLoadWithoutSaveReturnsDefaultWorld() {
         Engine e = new Engine();
         TETile[][] world = e.interactWithInputString("lwww");
-        assertNull("load with no save must not fabricate a world", world);
+        // load with no save falls back to a default world (never null), matching keyboard mode
+        assertNotNull("interactWithInputString must never return null", world);
+        assertEquals(Engine.WIDTH, world.length);
+        assertEquals(Engine.HEIGHT, world[0].length);
     }
 
     @Test
-    public void testToStringEmptyWhenNoWorld() {
+    public void testToStringNonEmptyEvenWithoutWorld() {
         Engine e = new Engine();
         e.interactWithInputString("l");
-        assertEquals("", e.toString());
+        // no save exists, but the engine fabricates a default world (never null)
+        assertTrue(e.toString().length() > 0);
     }
 
     @Test
