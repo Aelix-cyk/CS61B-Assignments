@@ -1,7 +1,9 @@
 package byow.lab12;
 
+import java.io.Serializable;
+
 /** An immutable (x, y) coordinate pair. */
-public class Position {
+public class Position implements Serializable {
     public final int x;
     public final int y;
 

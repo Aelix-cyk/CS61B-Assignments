@@ -1,9 +1,22 @@
 package byow.Core;
 
 import byow.InputDemo.InputSource;
+import byow.InputDemo.KeyboardInputSource;
 import byow.InputDemo.StringInputDevice;
 import byow.TileEngine.TERenderer;
 import byow.TileEngine.TETile;
+import byow.TileEngine.Tileset;
+import byow.lab12.Position;
+import edu.princeton.cs.introcs.StdDraw;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class Engine {
     TERenderer ter = new TERenderer();
@@ -13,12 +26,69 @@ public class Engine {
 
     /** The current world state (null until a world has been generated or loaded). */
     private TETile[][] world;
+    /** The player avatar (null until a world exists). */
+    private Avatar avatar;
+
+    /** Directory and file where the game state is persisted. */
+    private static final String SAVE_DIR = ".byow";
+    private static final String SAVE_FILE = "save.dat";
+    /** Overridable for tests that need to isolate the save file. */
+    String savePath = SAVE_DIR + "/" + SAVE_FILE;
 
     /**
      * Method used for exploring a fresh world. This method should handle all inputs,
      * including inputs from the main menu.
      */
     public void interactWithKeyboard() {
+        ter.initialize(WIDTH, HEIGHT);
+        drawMenu();
+
+        char choice = readMenuChoice();
+        if (choice == 'N') {
+            long seed = readSeedFromKeyboard();
+            world = WorldGenerator.generateWorld(WIDTH, HEIGHT, seed);
+            spawnAvatar();
+            ter.renderFrame(world);
+        }
+        // 'L' (load) not implemented yet: falls through to a default world
+
+        runGameLoop(new KeyboardInputSource(), true);
+    }
+
+    /** Draws the main menu screen using StdDraw directly. */
+    private void drawMenu() {
+        StdDraw.clear(Color.BLACK);
+        StdDraw.setFont(new Font("Monaco", Font.BOLD, 20));
+        StdDraw.setPenColor(Color.WHITE);
+        StdDraw.text(WIDTH / 2.0, HEIGHT / 2.0, "CS61B: THE GAME");
+        StdDraw.text(WIDTH / 2.0, HEIGHT / 2.0 - 2, "New Game (N)   Load (L)");
+        StdDraw.show();
+    }
+
+    /** Blocks until the player presses 'n' (new game) or 'l' (load). Returns uppercase. */
+    private char readMenuChoice() {
+        KeyboardInputSource source = new KeyboardInputSource();
+        while (true) {
+            char key = Character.toUpperCase(source.getNextKey());
+            if (key == 'N' || key == 'L') {
+                return key;
+            }
+        }
+    }
+
+    /** Reads decimal digits from the keyboard following a menu 'N' choice. */
+    private long readSeedFromKeyboard() {
+        KeyboardInputSource source = new KeyboardInputSource();
+        StringBuilder digits = new StringBuilder();
+        while (source.possibleNextInput()) {
+            char c = source.getNextKey();
+            if (Character.isDigit(c)) {
+                digits.append(c);
+            } else {
+                break; // first non-digit ends the seed
+            }
+        }
+        return digits.length() == 0 ? 0L : Long.parseLong(digits.toString());
     }
 
     /**
@@ -43,7 +113,16 @@ public class Engine {
      * @return the 2D TETile[][] representing the state of the world
      */
     public TETile[][] interactWithInputString(String input) {
-        InputSource source = new StringInputDevice(input);
+        runGameLoop(new StringInputDevice(input), false);
+        return world;
+    }
+
+    /**
+     * The shared input-agnostic game loop: parses seed commands and movement keys
+     * from {@code source}. When {@code render} is true, redraws the world after each
+     * key (keyboard mode); otherwise the world is updated silently (string mode).
+     */
+    private void runGameLoop(InputSource source, boolean render) {
         boolean parsingSeed = false;
         boolean sawLoadOrQuit = false;   // 'l' or ':' was seen (stop processing)
         StringBuilder seedDigits = new StringBuilder();
@@ -57,8 +136,14 @@ public class Engine {
                     long seed = seedDigits.length() == 0 ? 0L
                             : Long.parseLong(seedDigits.toString());
                     world = WorldGenerator.generateWorld(WIDTH, HEIGHT, seed);
+                    spawnAvatar();
                     seedDigits.setLength(0);
                     parsingSeed = false;
+                    if (key == 'l' || key == 'L') {
+                        loadState();
+                    } else if (key == ':') {
+                        saveState();
+                    }
                     if (key == 'l' || key == 'L' || key == ':') {
                         sawLoadOrQuit = true;
                     }
@@ -66,22 +151,53 @@ public class Engine {
             } else if (key == 'n' || key == 'N') {
                 parsingSeed = true;
             } else if (key == 'l' || key == 'L') {
-                sawLoadOrQuit = true;   // load: not implemented; stop
+                loadState();        // restore saved game (if any)
+                sawLoadOrQuit = true;
             } else if (key == ':') {
-                sawLoadOrQuit = true;   // save-and-quit: not implemented; stop
+                saveState();        // quit-and-save
+                sawLoadOrQuit = true;
+            } else if (world != null && isMovementKey(key)) {
+                avatar.move(Character.toLowerCase(key), world);
             }
-            // movement keys (w/a/s/d) and any other characters are no-ops for now
+            // other characters are no-ops
+
+            if (render && world != null) {
+                ter.renderFrame(world);
+            }
         }
 
         if (parsingSeed && seedDigits.length() > 0) {
             // input ended while still reading a seed (e.g. "n123" with no trailing char)
             world = WorldGenerator.generateWorld(WIDTH, HEIGHT,
                     Long.parseLong(seedDigits.toString()));
+            spawnAvatar();
         } else if (world == null && !sawLoadOrQuit) {
             // no n<seed> given and no load/quit: fall back to a default world (seed 0)
             world = WorldGenerator.generateWorld(WIDTH, HEIGHT, 0L);
+            spawnAvatar();
         }
-        return world;
+        if (render && world != null) {
+            ter.renderFrame(world);
+        }
+    }
+
+    private static boolean isMovementKey(char key) {
+        char k = Character.toLowerCase(key);
+        return k == 'w' || k == 'a' || k == 's' || k == 'd';
+    }
+
+    /** Places the avatar on the first walkable FLOOR tile found (deterministic scan). */
+    private void spawnAvatar() {
+        for (int x = 0; x < WIDTH; x += 1) {
+            for (int y = 0; y < HEIGHT; y += 1) {
+                if (world[x][y] == Tileset.FLOOR) {
+                    avatar = new Avatar(new Position(x, y), world);
+                    return;
+                }
+            }
+        }
+        // no floor found (shouldn't happen for a valid world)
+        avatar = null;
     }
 
     /** Returns the current world as a string, or an empty string if none has been generated. */
@@ -91,5 +207,37 @@ public class Engine {
             return "";
         }
         return TETile.toString(world);
+    }
+
+    /** Saves the current world + avatar position to {@code .byow/save.dat}. */
+    private void saveState() {
+        if (world == null || avatar == null) {
+            return;
+        }
+        File file = new File(savePath);
+        File dir = file.getParentFile();
+        if (dir != null && !dir.exists() && !dir.mkdirs()) {
+            return;
+        }
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
+            out.writeObject(new SaveState(world, avatar.pos()));
+        } catch (IOException e) {
+            System.err.println("Failed to save game: " + e.getMessage());
+        }
+    }
+
+    /** Restores a previously saved game from {@code .byow/save.dat}, if present. */
+    private void loadState() {
+        File file = new File(savePath);
+        if (!file.exists()) {
+            return;
+        }
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+            SaveState state = (SaveState) in.readObject();
+            world = state.world;
+            avatar = new Avatar(state.avatarPos, world);   // re-stamp the avatar tile
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Failed to load game: " + e.getMessage());
+        }
     }
 }

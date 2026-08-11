@@ -1,11 +1,23 @@
 package byow.Core;
 
 import byow.TileEngine.TETile;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
 
 import static org.junit.Assert.*;
 
 public class EngineTest {
+
+    @Before
+    public void cleanSaveFile() {
+        // remove any leftover save file so tests start in a clean state
+        File f = new File(".byow/save.dat");
+        if (f.exists()) {
+            f.delete();
+        }
+    }
 
     @Test
     public void testNewGameProducesWorld() {
@@ -14,6 +26,8 @@ public class EngineTest {
         assertNotNull(world);
         assertEquals(Engine.WIDTH, world.length);
         assertEquals(Engine.HEIGHT, world[0].length);
+        assertTrue("world should contain the avatar tile @",
+                TETile.toString(world).contains("@"));
     }
 
     @Test
@@ -21,7 +35,7 @@ public class EngineTest {
         Engine e1 = new Engine();
         Engine e2 = new Engine();
         TETile[][] a = e1.interactWithInputString("n123sss");
-        TETile[][] b = e2.interactWithInputString("n123sssww");
+        TETile[][] b = e2.interactWithInputString("n123sss");
         assertEquals(TETile.toString(a), TETile.toString(b));
     }
 
@@ -65,6 +79,20 @@ public class EngineTest {
     }
 
     @Test
+    public void testSaveThenLoadRestoresWorld() {
+        // play a world, move, then quit-save
+        Engine e = new Engine();
+        TETile[][] played = e.interactWithInputString("n123ddd:q");
+        assertNotNull(played);
+
+        // load it in a fresh engine
+        Engine e2 = new Engine();
+        TETile[][] loaded = e2.interactWithInputString("l");
+        assertNotNull("load should restore a saved world", loaded);
+        assertEquals(TETile.toString(played), TETile.toString(loaded));
+    }
+
+    @Test
     public void testEmptyInputFallsBackToDefaultWorld() {
         Engine e = new Engine();
         TETile[][] world = e.interactWithInputString("");
@@ -72,11 +100,12 @@ public class EngineTest {
     }
 
     @Test
-    public void testMovementKeysAreNoOps() {
+    public void testMovementMovesAvatar() {
         Engine e1 = new Engine();
         Engine e2 = new Engine();
-        TETile[][] withMovement = e1.interactWithInputString("n7wwssaad");
-        TETile[][] without = e2.interactWithInputString("n7");
-        assertEquals(TETile.toString(withMovement), TETile.toString(without));
+        TETile[][] moved = e1.interactWithInputString("n7wwssaad");
+        TETile[][] static_ = e2.interactWithInputString("n7");
+        assertNotEquals("movement keys should change the world (avatar moves)",
+                TETile.toString(moved), TETile.toString(static_));
     }
 }
