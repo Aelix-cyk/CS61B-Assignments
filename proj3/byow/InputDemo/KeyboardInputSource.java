@@ -23,6 +23,11 @@ public class KeyboardInputSource implements InputSource {
         }
     }
 
+    /** Returns true if a key is currently queued (non-blocking). */
+    public boolean hasNextKey() {
+        return StdDraw.hasNextKeyTyped();
+    }
+
     public boolean possibleNextInput() {
         return true;
     }
