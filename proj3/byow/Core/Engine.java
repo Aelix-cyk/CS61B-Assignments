@@ -23,6 +23,8 @@ public class Engine {
     /* Feel free to change the width and height. */
     public static final int WIDTH = 80;
     public static final int HEIGHT = 30;
+    /** Height of the HUD strip at the top of the window (in tiles). */
+    public static final int HUD_HEIGHT = 2;
 
     /** The current world state (null until a world has been generated or loaded). */
     private TETile[][] world;
@@ -40,7 +42,7 @@ public class Engine {
      * including inputs from the main menu.
      */
     public void interactWithKeyboard() {
-        ter.initialize(WIDTH, HEIGHT);
+        ter.initialize(WIDTH, HEIGHT + HUD_HEIGHT);
         drawMenu();
 
         char choice = readMenuChoice();
@@ -62,6 +64,32 @@ public class Engine {
         StdDraw.setPenColor(Color.WHITE);
         StdDraw.text(WIDTH / 2.0, HEIGHT / 2.0, "CS61B: THE GAME");
         StdDraw.text(WIDTH / 2.0, HEIGHT / 2.0 - 2, "New Game (N)   Load (L)");
+        StdDraw.show();
+    }
+
+    /**
+     * Draws the HUD strip at the top of the window: the avatar's position on the
+     * left, and the description of the tile under the mouse cursor on the right.
+     * The world grid occupies the bottom {@link #HEIGHT} rows of the canvas.
+     */
+    private void drawHUD() {
+        double hudY = HEIGHT + HUD_HEIGHT / 2.0;
+        StdDraw.setFont(new Font("Monaco", Font.BOLD, 14));
+        StdDraw.setPenColor(Color.WHITE);
+
+        // avatar position
+        String pos = avatar == null ? "-" : "(" + avatar.pos().x + ", " + avatar.pos().y + ")";
+        StdDraw.textLeft(1, hudY, "Position: " + pos);
+
+        // hovered tile description
+        double mx = StdDraw.mouseX();
+        double my = StdDraw.mouseY();
+        if (mx >= 0 && mx < WIDTH && my >= 0 && my < HEIGHT) {
+            int tx = (int) mx;
+            int ty = (int) my;
+            TETile tile = world[tx][ty];
+            StdDraw.textRight(WIDTH - 1, hudY, tile.description());
+        }
         StdDraw.show();
     }
 
@@ -163,6 +191,7 @@ public class Engine {
 
             if (render && world != null) {
                 ter.renderFrame(world);
+                drawHUD();
             }
         }
 
@@ -178,6 +207,7 @@ public class Engine {
         }
         if (render && world != null) {
             ter.renderFrame(world);
+            drawHUD();
         }
     }
 
