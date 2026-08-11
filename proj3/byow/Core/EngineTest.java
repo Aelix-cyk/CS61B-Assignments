@@ -93,6 +93,36 @@ public class EngineTest {
     }
 
     @Test
+    public void testSplitInputWithSaveLoadEqualsSingleInput() {
+        // spec equivalence: n123sss:q then lww == n123sssww
+        Engine a = new Engine();
+        a.interactWithInputString("n123sss:q");
+
+        Engine b = new Engine();
+        TETile[][] split = b.interactWithInputString("lww");
+
+        Engine c = new Engine();
+        TETile[][] single = c.interactWithInputString("n123sssww");
+
+        assertEquals("split input with save/load must equal single input",
+                TETile.toString(split), TETile.toString(single));
+    }
+
+    @Test
+    public void testMovementWorksAfterLoad() {
+        // save a world, then load and move: the avatar must actually move
+        // (regression: reference-equality on deserialized tiles blocked movement)
+        new Engine().interactWithInputString("n123sss:q");
+
+        Engine e = new Engine();
+        TETile[][] before = e.interactWithInputString("l");      // just load
+        Engine e2 = new Engine();
+        TETile[][] after = e2.interactWithInputString("lwww");   // load + move
+        assertNotEquals("movement must work after loading a saved world",
+                TETile.toString(before), TETile.toString(after));
+    }
+
+    @Test
     public void testEmptyInputFallsBackToDefaultWorld() {
         Engine e = new Engine();
         TETile[][] world = e.interactWithInputString("");

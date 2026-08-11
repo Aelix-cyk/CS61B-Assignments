@@ -168,18 +168,20 @@ public class Engine {
     /** Keyboard mode: polls keys and refreshes the HUD on mouse movement. */
     private void runKeyboardLoop(KeyboardInputSource source) {
         boolean parsingSeed = false;
-        boolean sawLoadOrQuit = false;
+        boolean sawLoad = false;
+        boolean sawQuit = false;
         StringBuilder seedDigits = new StringBuilder();
         double lastMouseX = StdDraw.mouseX();
         double lastMouseY = StdDraw.mouseY();
 
-        while (!sawLoadOrQuit) {
+        while (!sawQuit) {
             if (source.hasNextKey()) {
                 char key = source.getNextKey();
                 // process the key (same handling as string mode)
-                ProcessResult result = processKey(key, parsingSeed, sawLoadOrQuit, seedDigits);
+                ProcessResult result = processKey(key, parsingSeed, sawLoad, sawQuit, seedDigits);
                 parsingSeed = result.parsingSeed;
-                sawLoadOrQuit = result.sawLoadOrQuit;
+                sawLoad = result.sawLoad;
+                sawQuit = result.sawQuit;
                 if (result.changed) {
                     ter.renderFrame(world);
                     drawHUD();
@@ -192,27 +194,29 @@ public class Engine {
                 drawHUD();   // just refresh the HUD (mouse-hover description)
             }
         }
-        finishGameLoop(parsingSeed, sawLoadOrQuit, seedDigits, true);
+        finishGameLoop(parsingSeed, sawLoad, sawQuit, seedDigits, true);
     }
 
     /** String mode: blocks on each key from the source. */
     private void runBlockingLoop(InputSource source, boolean render) {
         boolean parsingSeed = false;
-        boolean sawLoadOrQuit = false;
+        boolean sawLoad = false;
+        boolean sawQuit = false;
         StringBuilder seedDigits = new StringBuilder();
 
-        while (source.possibleNextInput() && !sawLoadOrQuit) {
+        while (source.possibleNextInput() && !sawQuit) {
             char key = source.getNextKey();
-            ProcessResult result = processKey(key, parsingSeed, sawLoadOrQuit, seedDigits);
+            ProcessResult result = processKey(key, parsingSeed, sawLoad, sawQuit, seedDigits);
             parsingSeed = result.parsingSeed;
-            sawLoadOrQuit = result.sawLoadOrQuit;
+            sawLoad = result.sawLoad;
+            sawQuit = result.sawQuit;
 
             if (render && world != null) {
                 ter.renderFrame(world);
                 drawHUD();
             }
         }
-        finishGameLoop(parsingSeed, sawLoadOrQuit, seedDigits, render);
+        finishGameLoop(parsingSeed, sawLoad, sawQuit, seedDigits, render);
     }
 
     private static boolean mouseMoved(double lastX, double lastY) {
@@ -222,66 +226,69 @@ public class Engine {
     /** Result of processing one key: updated parser state + whether the world changed. */
     private static class ProcessResult {
         boolean parsingSeed;
-        boolean sawLoadOrQuit;
+        boolean sawLoad;
+        boolean sawQuit;
         boolean changed;
 
-        ProcessResult(boolean parsingSeed, boolean sawLoadOrQuit, boolean changed) {
+        ProcessResult(boolean parsingSeed, boolean sawLoad, boolean sawQuit, boolean changed) {
             this.parsingSeed = parsingSeed;
-            this.sawLoadOrQuit = sawLoadOrQuit;
+            this.sawLoad = sawLoad;
+            this.sawQuit = sawQuit;
             this.changed = changed;
         }
     }
 
-    /** Processes one key from the input; mutates {@code world} / {@code avatar}. */
-    private ProcessResult processKey(char key, boolean parsingSeed, boolean sawLoadOrQuit,
-                                     StringBuilder seedDigits) {
+    /**
+     * Processes one key from the input; mutates {@code world} / {@code avatar}.
+     * A non-digit key arriving while reading a seed commits the seed and is then
+     * re-processed as a normal command (it is NOT swallowed) — so "n123sss" means
+     * seed 123 followed by three 's' movements, per the spec.
+     */
+    private ProcessResult processKey(char key, boolean parsingSeed, boolean sawLoad,
+                                     boolean sawQuit, StringBuilder seedDigits) {
         boolean changed = false;
         if (parsingSeed) {
             if (Character.isDigit(key)) {
                 seedDigits.append(key);
-            } else {
-                long seed = seedDigits.length() == 0 ? 0L
-                        : Long.parseLong(seedDigits.toString());
-                world = WorldGenerator.generateWorld(WIDTH, HEIGHT, seed);
-                spawnAvatar();
-                changed = true;
-                seedDigits.setLength(0);
-                parsingSeed = false;
-                if (key == 'l' || key == 'L') {
-                    loadState();
-                } else if (key == ':') {
-                    saveState();
-                }
-                if (key == 'l' || key == 'L' || key == ':') {
-                    sawLoadOrQuit = true;
-                }
+                return new ProcessResult(true, sawLoad, sawQuit, false);
             }
-        } else if (key == 'n' || key == 'N') {
+            // non-digit: commit the pending seed, then fall through to process key as a command
+            long seed = seedDigits.length() == 0 ? 0L
+                    : Long.parseLong(seedDigits.toString());
+            world = WorldGenerator.generateWorld(WIDTH, HEIGHT, seed);
+            spawnAvatar();
+            changed = true;
+            seedDigits.setLength(0);
+            parsingSeed = false;
+            // do NOT return; process this key as a normal command below
+        }
+
+        if (key == 'n' || key == 'N') {
             parsingSeed = true;
         } else if (key == 'l' || key == 'L') {
             loadState();
-            sawLoadOrQuit = true;
+            sawLoad = true;
             changed = true;
         } else if (key == ':') {
             saveState();
-            sawLoadOrQuit = true;
+            sawQuit = true;
             changed = true;
         } else if (world != null && isMovementKey(key)) {
             Position before = avatar.pos();
             avatar.move(Character.toLowerCase(key), world);
             changed = !avatar.pos().equals(before);
         }
-        return new ProcessResult(parsingSeed, sawLoadOrQuit, changed);
+        return new ProcessResult(parsingSeed, sawLoad, sawQuit, changed);
     }
 
     /** Handles the end-of-input world fallback (default seed / pending seed). */
-    private void finishGameLoop(boolean parsingSeed, boolean sawLoadOrQuit,
+    private void finishGameLoop(boolean parsingSeed, boolean sawLoad, boolean sawQuit,
                                 StringBuilder seedDigits, boolean render) {
         if (parsingSeed && seedDigits.length() > 0) {
             world = WorldGenerator.generateWorld(WIDTH, HEIGHT,
                     Long.parseLong(seedDigits.toString()));
             spawnAvatar();
-        } else if (world == null && !sawLoadOrQuit) {
+        } else if (world == null && !sawLoad && !sawQuit) {
             world = WorldGenerator.generateWorld(WIDTH, HEIGHT, 0L);
             spawnAvatar();
         }

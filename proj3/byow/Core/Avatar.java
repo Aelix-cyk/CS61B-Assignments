@@ -53,11 +53,17 @@ public class Avatar {
             default: return; // not a movement key
         }
         Position target = new Position(pos.x + dx, pos.y + dy);
-        if (inBounds(world, target) && world[target.x][target.y] == Tileset.FLOOR) {
+        // compare by description, not reference: after loading a saved world the
+        // deserialized floor tiles are new TETile instances, not Tileset.FLOOR itself
+        if (inBounds(world, target) && isFloor(world[target.x][target.y])) {
             world[pos.x][pos.y] = Tileset.FLOOR;   // restore where we were
             pos = target;
             world[pos.x][pos.y] = Tileset.AVATAR;  // stamp where we are
         }
+    }
+
+    private static boolean isFloor(TETile tile) {
+        return tile != null && tile.description().equals(Tileset.FLOOR.description());
     }
 
     private static boolean inBounds(TETile[][] world, Position p) {
