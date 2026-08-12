@@ -4,19 +4,14 @@ import byow.TileEngine.TETile;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-
 import static org.junit.Assert.*;
 
 public class EngineTest {
 
     @Before
-    public void cleanSaveFile() {
-        // remove any leftover save file so tests start in a clean state
-        File f = new File(".byow/save.dat");
-        if (f.exists()) {
-            f.delete();
-        }
+    public void cleanSave() {
+        // remove any leftover saved game so tests start in a clean state
+        Engine.clearSave();
     }
 
     @Test
